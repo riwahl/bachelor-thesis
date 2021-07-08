@@ -1,0 +1,67 @@
+---
+# Required Information --------------------------------------------------------
+swedish: FALSE # FALSE for english. This only changes the automatically generated
+#				content. Section titles etc. will need to be changed by hand. 
+title: "Estimating expected shortfall using an unconditional peaks-over-threshold method under an extreme value approach"
+author: "Rikard Wahlström"
+year: "Spring 2021"
+advisor: "Lars Forsberg"
+
+# Optional Information --------------------------------------------------------
+# comment out if unnecessary
+abstract: |
+  `r if(knitr:::is_latex_output()) paste(readLines('prelim/00-abstract.Rmd'), collapse = '\n  ')`
+lot: true                              # list of tables
+lof: true                              # list of figures
+
+bibliography: bib/references.bib       # bibliography file
+#
+# Rendering Options -----------------------------------------------------------
+#
+knit: "bookdown::render_book"
+csl: bib/harvard-cite-them-right.csl
+output: 
+  uppsaladown::thesis_pdf
+space_between_paragraphs: true       # if you want spaces bt paragraph
+# header-includes:     # if including additional latex packages or commands
+  # - \setlength{\parindent}{17pt}
+---
+
+
+
+
+<!--
+Above is the YAML (YAML Ain't Markup Language) header that includes a lot of
+metadata used to produce the document.  Be careful with spacing in this header!
+If you'd like to include a comment that won't be produced in your resulting file
+enclose it in a block like this.
+-->
+
+<!--
+If you receive a duplicate label error after knitting, make sure to delete the
+index.Rmd file and then knit again.
+-->
+
+```{r include_packages, include = FALSE}
+# This chunk ensures that the `uppsaldown` package is installed and loaded. This
+# package includes the template files for the thesis.
+if (!require(devtools)) {
+  install.packages("devtools", repos = "http://cran.rstudio.com")
+}
+if (!require(uppsaladown)) {
+  devtools::install_github("lpandersson/uppsaladown")
+  library(uppsaladown)
+}
+```
+
+<!-- 
+The {.unnumbered} option here means that the introduction will be "Section  0."
+You can also use {-} for no numbers on section. 
+-->
+
+<!--
+The body of the thesis starts underneath the text below. Feel free to delete
+everything below this.
+-->
+
+

@@ -1,0 +1,22 @@
+---
+title: "Untitled"
+output: pdf_document
+---
+
+
+```{r}
+
+library(lubridate)
+
+descriptive_stats <- 
+  data.frame(
+    Measure = c("Start date", "End date", "Number of observations"),
+    OMXS30 = c(as_date(min(omxs30$date)), as_date(max(omxs30$date)), nrow(omxs30_log_return))
+  )
+
+kbl(descriptive_stats, booktabs = T)
+
+```
+
+
+

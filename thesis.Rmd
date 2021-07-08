@@ -1,0 +1,2010 @@
+---
+# Required Information --------------------------------------------------------
+swedish: FALSE # FALSE for english. This only changes the automatically generated
+#				content. Section titles etc. will need to be changed by hand. 
+title: "Estimating expected shortfall using an unconditional peaks-over-threshold method under an extreme value approach"
+author: "Rikard Wahlström"
+year: "Spring 2021"
+advisor: "Lars Forsberg"
+
+# Optional Information --------------------------------------------------------
+# comment out if unnecessary
+abstract: |
+  `r if(knitr:::is_latex_output()) paste(readLines('prelim/00-abstract.Rmd'), collapse = '\n  ')`
+lot: true                              # list of tables
+lof: true                              # list of figures
+
+bibliography: bib/references.bib       # bibliography file
+#
+# Rendering Options -----------------------------------------------------------
+#
+knit: "bookdown::render_book"
+csl: bib/harvard-cite-them-right.csl
+output: 
+  uppsaladown::thesis_pdf
+space_between_paragraphs: true       # if you want spaces bt paragraph
+# header-includes:     # if including additional latex packages or commands
+  # - \setlength{\parindent}{17pt}
+---
+
+
+
+
+<!--
+Above is the YAML (YAML Ain't Markup Language) header that includes a lot of
+metadata used to produce the document.  Be careful with spacing in this header!
+If you'd like to include a comment that won't be produced in your resulting file
+enclose it in a block like this.
+-->
+
+<!--
+If you receive a duplicate label error after knitting, make sure to delete the
+index.Rmd file and then knit again.
+-->
+
+```{r include_packages, include = FALSE}
+# This chunk ensures that the `uppsaldown` package is installed and loaded. This
+# package includes the template files for the thesis.
+if (!require(devtools)) {
+  install.packages("devtools", repos = "http://cran.rstudio.com")
+}
+if (!require(uppsaladown)) {
+  devtools::install_github("lpandersson/uppsaladown")
+  library(uppsaladown)
+}
+```
+
+<!-- 
+The {.unnumbered} option here means that the introduction will be "Section  0."
+You can also use {-} for no numbers on section. 
+-->
+
+<!--
+The body of the thesis starts underneath the text below. Feel free to delete
+everything below this.
+-->
+
+
+
+<!--chapter:end:index.Rmd-->
+
+<!-- # Introduction -->
+
+# Introduction
+
+> A little river seems to him, who has never seen a large river, a mighty stream; and so with other things -- a tree, a man -- anything appears greatest to him that never knew a greater.
+
+> `r tufte::quote_footer('--- Lucretius, *De Rerum Natura*')`
+
+## Extreme events and the Lucretius problem
+
+The introductory quote has been pithily summarized as the *Lucretius problem* or the *Lucretian fallacy* by @taleb2012antifragile. He rephrases it in a bit more colorful fashion: the fool believes that the tallest mountain in the world is the tallest mountain that he has seen. Under this mental fallacy, the "fool" assumes that the worst-case event that can occur is the worst-case event that *has* occurred. An example[^resnickexample] can serve as an illustration. During the period 1970--1995, the two worst cumulative insurance losses were results of Hurricane Andrew and the Northridge earthquake in California. Someone vulnerable to the Lucretian fallacy (perhaps an insurance company) would conclude that these events constituted the worst possible outcome that could happen, since they were then the worst outcome to date that *had* happened. However, Hurricane Katrina would serve as a reminder of the dangers of such an assumption. In short, reality might just produce more extreme outcomes than what is assumed on the basis of past events. In other words: the worst is yet to come!
+
+One industry that seems particularly vulnerable to the Lucretian fallacy is the financial sector. This was made painfully obvious during the financial crisis of 2007--2008. This crisis accelerated the growth of the field of *risk management*. In risk management, the concern is mainly centered around asking the question: "What is the potential future loss that can be expected?". The field commonly uses statistical models based upon the Gaussian (normal) distribution. The main reason for this, it seems, is that the Gaussian distribution has convenient properties[^normalproperties], and not necessarily because it reflects financial reality. Indeed, a Gaussian assumption is *not* realistic in finance, the main reason being that financial returns are often *leptokurtic*, i.e. they frequently exhibit heavy ("fat") tails.[^leptokurtic] This is due to the presence of extreme values, which leads to a peaked density [@righi2015comparison]. The skepticism regarding the adequateness of the normality assumption for financial time series is not new; indeed Mandelbrot [-@mandelbrot1963; -@mandelbrot1967] and Fama [-@fama1963; -@fama1965] were early critics of the (ab)use of the normal distribution in this context. There is now considerable evidence that the normal distribution is too thin-tailed to adequately fit financial data from many markets (see @rocco2013 and @franke2015statistics, among others). For risk management to be prudent, then, a proper distribution function (that is not the normal distribution, in spite of all its conveniences) must be used in order to reflect this reality.
+
+There has not been a shortage of proposed solutions for assessing operational risk in finance and to better deal with the heavy-tailed nature of financial time series, see, among others, @bocker2010multivariate, @chavez2006quantitative, @chavez2016extreme and @puccetti2014asymptotic. What all seem to agree on, however, is that *extreme value theory* should be employed as it better reflects reality in this context. Extreme value theory, in short, focuses on tail properties of a distribution rather than, say, its center (mean). And, in this context, it is the tail of a distribution that matters when we are interested in quantities like Value-at-Risk and expected shortfall [@cirillo2016expected].
+
+The so-called Value-at-Risk (VaR) has come to be *de rigueur* risk measure for financial risk management. The reasons for this include the measure's conceptual simplicity, ease of computation and applicability [@yamai2005value]. However, VaR has been criticized for having several conceptual problems (see @artzner1999coherent and @MolinaMuoz2020, among others). These shortcomings include (i) VaR measuring only percentiles of profit-loss distributions, disregarding losses beyond the specified VaR level, i.e. it does not account for the so-called tail risk and (ii) VaR not being a *coherent* risk measure due to it not being subadditive.
+
+The first shortcoming listed above can be especially serious: VaR can only show what the expected losses can be if a tail event does not occur. If a tail event does occur, however, it can be expected that the losses will exceed what is indicated by the VaR measure, but VaR itself does not give an indication of how much that might be [@du2017backtesting]. Or, as an article in @economist put it: "VaR captures how bad things can get 99% of the time, but the real trouble is caused by the outlying 1%."
+
+As an alternative to VaR, the use of expected shortfall (ES) has been proposed by @artzner1997thinking, with the properties of ES further studied by @acerbi2002coherence, @acerbi2001expected and @rockafellar2002conditional, among others. Furthermore, based on the recommendations published in a consultative document by the @basel2013, VaR is set to be replaced by ES as a measure of market risk for capital requirement purposes. It is therefore of interest to see how ES performs as a risk management tool in a financial setting.
+
+## The subject and aim of the thesis
+
+The purpose of this thesis is to give an introduction to how EVT can be used in financial risk management to (hopefully) produce sensible estimates of risk measures and, more specifically, to give an introduction to how EVT can be used to estimate ES. This will be achieved through an introduction of the theoretical underpinnings of the method as well as a practical application on real-world financial data. The application of the estimation method will be performed on five distinct asset classes, namely: (i) equities, (ii) fixed income, (iii) currency exchange rates, (iv) commodities and (v) cryptocurrencies. This empirical analysis will be performed in order to estimate ES on actual market data for the purpose of evaluating the performance of an EVT-based approached to estimating ES for different assets. Is every asset class equally suited for an EVT approach? Is some asset class more prone to extreme values than others? What other differences come to light between different asset classes? These are questions that I intend to highlight in this thesis. 
+
+The aim is to contribute to the literature an overview of how ES can be used in an EVT framework to produce ES estimates for a range of different asset classes and to shed some light on whether these are sensible and reflective of reality, and thus useful in practical risk management. The study is also conducted on a number of different asset classes, which will hopefully give further insight into the differences in the performance of ES on different types of financial assets. Finally, the thesis raises some potential problems with the method used and offers some suggestions for improvements and future research.  
+
+## Prior research
+
+EVT is not a new field of statistics, although it has gained in popularity in recent decades. @gumbel1958statistics is considered a foundational book for the field. Other works on EVT in general include @haan2006extreme, @embrechts1997modelling and @resnick2007heavy. For EVT applied in a financial context, see @longin2016extreme and @mcneil2015quantitative, among other works.
+
+VaR has been extensively studied in the literature. One influential paper is @mcneil2000estimation. In it, they propose a method for estimating VaR and related risk measures describing the tail of the conditional distribution of a heteroscedastic financial return series, combining a pseudo-maximum-likelihood fitting of GARCH models and EVT for estimating the tail of the innovation distribution of the GARCH model. @gilli2006 use different approaches to EVT in modeling tail-related risk measures, VaR being among them. 
+
+ES estimation has not been as widely studied as VaR, and the former has often featured less prominently in the research corpus. Studies are not completely missing, however. Some examples of previous studies include @alexander2008developing, @jalal2008predicting and @ergun2010time. The focus of the papers just mentioned was to, respectively, propose a stress test, verify specification errors and highlight advantages in time-varying asymmetry in risk estimation. @wong2012capturing gives a comparison of different methods for estimating ES and @righi2015comparison conducts an extensive comparison of different ES estimation models. 
+
+## Outline of the thesis
+
+The remainder of this thesis is organized as follows.
+
+The following section provides the theoretical framework for the subject of the thesis and gives an introduction to extreme value theory and its application in risk management. An introduction is also given to financial risk measures in the form of VaR and ES. Section \@ref(sec:data) describes the methodology used for the estimation of ES and also introduces the data used in this thesis for this purpose. Section \@ref(sec:results) presents the results. Finally, Section \@ref(sec:slutsats) gives some concluding remarks, potential issues with the study and some suggestions for further research on the topic.
+
+
+[^leptokurtic]: The fact that financial return series are leptokurtic or heavy-tailed is one of the so-called *stylized facts* of financial return series, see @mcneil2015quantitative.
+
+[^normalproperties]: These "convenient properties" are that the normal distribution function is completely defined by its mean $\mu$ and variance $\sigma^2$.
+
+[^resnickexample]: Example taken from @resnick2007heavy.
+
+\newpage
+
+<!--chapter:end:sections/01-intro.Rmd-->
+
+<!-- # Methodology -->
+
+# Theoretical foundations {#sec:method}
+
+In this section, the aim is to present the theoretical underpinnings of the subject of the thesis and give the essential theoretical framework for understanding estimation of ES in an EVT context.
+
+The first section introduces financial risk measurement as a practice and the measures used therein. This entails a review of both VaR and ES. Although ES is the focus of the thesis, ES builds on VaR and it is therefore necessary to introduce both measures. The section after that gives an introduction to EVT and how it can be used in modeling extreme values in financial time series and, of course, its use in estimating ES. 
+
+## Financial risk measurement and risk measures
+
+### Introduction
+
+In general terms, a risk measure maps a financial position with loss $L$ with a real number measuring the "riskiness" of $L$. Risk measures are used for a range of different purposes in practice. Among other things, they are used to determine the amount of capital a financial institution needs to maintain to guard against future (expected and unexpected) losses on its portfolio, in order to satisfy regulators (and, one would hope, to protect its customers). Risk measures can also be used to determine appropriate margin requirements for investors engaged in trading.
+
+The approaches to measuring the risk of a financial position can be grouped into three categories: (i) the *notional-amount* approach, (ii) risk measures based on *scenarios* and (iii) risk measures based on *loss distributions*.[^riskmeasures]
+
+The notional-amount approach is the earliest approach to quantifying the risk of a portfolio of risky assets. Under this approach, the risk of a portfolio is defined as the sum of the notional values of the individual securities in the portfolio, which are then weighted by some factor which is supposed to represent an assessment of the riskiness of each constituent part of the portfolio. Scenario-based risk measures considers a range of different future risk-factor changes -- scenarios -- such as an increase in relevant exchange rates with a concurrent drop in major stock indices. Under the scenario-based approach, the risk of a portfolio is measured as the maximum loss of the portfolio under *all* potential future scenarios. This approach is the one generally adopted in so-called stress testing. Finally, risk measures based on loss distributions builds on statistical quantities describing the conditional or unconditional loss distribution of a portfolio over some predetermined time horizon $\Delta t$. This is the approach used in most modern measures, VaR and ES being two examples. For this reason, it will be the focus for this thesis. 
+
+### Risk measures based on loss distributions
+
+Let $V_{t+1}$ represent the value of a portfolio at the end of a certain time period and let $\Delta V_{t+1} = V_{t+1} - V_t$ represent the change in the value of that portfolio. The *loss* is then defined as $L_{t+1} := -\Delta V_{t+1}$. The distribution of $L_{t + 1}$ is what is termed the *loss distribution*, which thus forms the basis for risk measures based on loss distributions. It should be noted that, since $L_{t+1}$ is defined as the *negative* value of $\Delta V_{t+1}$, positive values of $L_{t+1}$ represent losses. Since we are here mainly interested in the large losses, the focus will be on the right-hand tail of the loss distribution.
+
+Risk measures based on loss distributions have a number of advantages. The concept of a loss distribution is sensible on all levels of aggregation, i.e. from a single financial instrument or security to the overall position of an entire financial institution. Furthermore, the loss distribution reflects netting and diversification effects [@mcneil2015quantitative]. As stated in the introduction to this section, VaR and ES are two risk measures that are based on loss distributions, and they are both introduced next. 
+
+#### Value-at-Risk (VaR)
+
+As has been stated previously, VaR is the risk measure most widely used by financial institutions and it has had a prominent role in the Basel regulatory framework. In general, VaR is defined as the opposite of the minimum loss that can occur at a given (high) confidence level for a pre-defined time horizon. The regulatory norms for market risk set the time horizon at 10 days, indicating the period in which a bank is supposed to be able to liquidate the relevant financial position, and the confidence level at 99% [@rocco2013].
+
+Let us consider a portfolio of risky assets and a fixed time horizon $\Delta t$, with the distribution function of the corresponding loss distribution denoted by $F_{L}(l)=P(L \leq l)$. The idea behind VaR is to define a statistic based on $F_L$ that measures the severity of the risk of holding a portfolio over the time period $\Delta t$. In general terms, VaR is then defined as the maximum loss that is not exceeded with a given high probability. A more formal definition is as follows [@mcneil2015quantitative].
+
+```{definition, VaR, name = "Value-at-Risk"}
+
+Given som confidence level $\alpha \in (0,1)$, the VaR of a portfolio with loss $L$ at the confidence level $\alpha$ is given by the smallest number $l$ such that the probability that the loss $L$ exceeds $l$ is no larger than $1-\alpha$. In mathematical terms, VaR is defined as follows.  
+
+\begin{equation}
+\text{VaR}_{\alpha} = \text{VaR}_{\alpha}(L) = \text{inf}\{l \in \mathbb R: P(L > l) \leq 1 - \alpha \} = \text{inf}\{l \in \mathbb R: F_{L}(l) \geq \alpha \}.
+(\#eq:VaR)
+\end{equation}
+
+```
+
+VaR is thus simply a quantile[^quantile] of the loss distribution. In practice, typical values for $\alpha$ are $\alpha = 0.95$ or $\alpha = 0.99$ and the time horizon $\Delta t$ chosen is usually one or ten days.
+
+By virtue of Definition \@ref(def:VaR), VaR does not give any information regarding the *severity* of losses that occur with a probability of less than $1 - \alpha$. This is one of the great drawbacks of VaR as a measure of risk (remember: reality can produce more extreme outcomes than what can be assumed on the basis of past events). This is a shortcoming that ES tries to remedy.
+
+[^quantile]: Quantiles play an important role in risk management in general, and a formal definition is found in Appendix \@ref(sec:quantiles). 
+
+#### Expected Shortfall (ES)
+
+ES as a risk measure was initially introduced by @rappoport1993new under the name of average shortfall. It was further popularized by Artzner [-@artzner1999coherent; -@artzner1997thinking]. There exists a number of variations on the ES risk measure with a variety of names, examples being *tail conditional expectation*, *worst conditional expectation* and *conditional VaR*. Despite all the variations, they all coincide for continuous loss distributions.
+
+ES is closely related to VaR and is defined as the conditional expectation of loss for losses beyond the VaR level. Thus, by definition, ES takes into account losses beyond the VaR level. Therefore, while VaR represents the *minimum* loss expected at a determined confidence level, ES represents the expected *value* of that loss, provided that the loss is equal to or greater than the VaR [@zikovic2012ranking]. ES is more formally defined as follows.
+
+```{definition, ES, name = "Expected shortfall"}
+
+For a loss $L$ with $E(\vert L \vert) < \infty$ and distribution function $F_L$, the ES at confidence level $\alpha \in (0,1)$ is defined as 
+
+\begin{equation}
+\text{ES}_{\alpha} = \frac{1}{1-\alpha} \int_{\alpha}^{1} q_u (F_L) du,
+(\#eq:ES)
+\end{equation}
+
+where $q_u (F_L) = F_{L}^{\leftarrow}(u)$ is the quantile function of $F_L$.
+
+```
+
+By virtue of Definition \@ref(def:ES), at the confidence level $\alpha$, ES takes into account what occurs in the tail, beyond the corresponding $\text{VaR}_{\alpha}$. ES is related to VaR by
+
+```{=tex}
+\begin{equation}
+\text{ES}_{\alpha} = \frac{1}{1-\alpha} \int_{\alpha}^{1} \text{VaR}_u (L) du.
+(\#eq:ESVaR)
+\end{equation}
+```
+
+Figure \@ref(fig:VaRES) gives a graphical representation of relationship between VaR and ES. The figure gives an example of a loss distribution with the 95% VaR and ES, together with the mean loss $E(L)$, marked.
+
+```{r VaRES, message = FALSE, warning = FALSE, cache=TRUE, echo = FALSE, fig.cap='A graphical representation of the relationship between VaR and ES.', out.width='80%', fig.asp=.75, fig.pos="H", fig.align='center'}
+
+library(fGarch)
+library(ggplot2)
+library(sn)
+library(latex2exp)
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+central_tendency_sim <- -2.6
+dispersion_sim <- 3
+skewness_sim <- 1.5
+
+N_sim <- 10000
+
+obs_sim <- seq(from = -10,
+               to = 10,
+               length.out = N_sim)
+
+ggplot(data = data.frame(u = obs_sim),
+       mapping = aes(x = u)) +
+  stat_function(fun = dsnorm,
+                size = 1.5,
+                color = cbp1[7],
+                args = list(mean = central_tendency_sim,
+                            sd = dispersion_sim,
+                            xi = skewness_sim)) +
+  geom_vline(aes(xintercept = -2.6), linetype = "dotted", size = 1, colour = cbp1[2]) +
+  geom_vline(aes(xintercept = 2.6), size = 1, colour = cbp1[2]) +
+  geom_vline(aes(xintercept = 5),linetype = "dashed", size = 1, colour = cbp1[2]) +
+  theme_minimal() +
+  annotate("text", x = (central_tendency_sim + 0.7), y = 0.15, label = "E(L)") +
+  annotate("text", x = (3.2), y = 0.15, label = "VaR") +
+  annotate("text", x = (5.5), y = 0.15, label = "ES") +
+  ylab("Probability density") +
+  xlab("Loss")
+
+
+```
+
+Instead of fixing a particular confidence level $\alpha$, VaR is averaged over all levels $u \geq \alpha$ and ES therefore looks further into the tail of the loss distribution (which is illustrated in Figure \@ref(fig:VaRES)). We have that $\text{ES}_{\alpha}$ depends only on the distribution of $L$ and $\text{ES}_{\alpha} \geq \text{VaR}_{\alpha}$.
+
+For continuous loss distributions, ES can be interpreted as the expected loss that is incurred *in the event that VaR is exceeded*. For an integrable loss $L$ with continuous distribution function $F_L$ and for any $\alpha \in (0, 1)$, we have
+
+```{=tex}
+\begin{equation}
+\text{ES}_{\alpha} = \frac{E(L; L \geq q_{\alpha}(L))}{1-\alpha} = E(L \vert L \geq \text{VaR}_{\alpha}).
+(\#eq:ES2)
+\end{equation}
+```
+Because $\text{ES}_{\alpha}$ can be thought of as an average over all losses that are greater than or equal to $\text{VaR}_{\alpha}$, it is sensitive to the severity of losses exceeding $\text{VaR}_{\alpha}$, which in this context is considered an advantage.
+
+\newpage
+
+## The theory of extreme values {#sec:evt}
+
+### Introduction
+
+Extreme value theory (EVT) is a branch of probability that is concerned with limiting laws for extreme values in large samples. EVT contains many important results describing the behaviour of sample maxima and minima, upper-order statistics and sample values exceeding high thresholds. EVT has many applications, but the focus in this thesis will be on its application to financial risk factors, and in particular in modeling the extremal behaviour of such risk factors. More specifically, the interest is on models for the *tail* of the distribution of financial risk-factor changes.
+
+Following @mcneil1999extreme, there are two main methods for estimating extreme values. The first method consists of so-called *block maxima* (BM) models, which are centered around the generalized extreme value (GEV) distribution and based on the Fisher-Tippett-Gnedenko theorem (@fisher1928limiting and @gnedenko1943distribution). BM models represent models that are designed for the largest observations from samples of independently and identically distributed observations. The second method consists of *peaks-over-threshold* (POT) models, which are centered around the generalized Pareto distribution (GPD) and based on the Pickands-Balkema-de Haan theorem (@10.2307/2959306 and @pickands1975statistical). POT models concern all observations which exceed a certain (high) threshold. Within the class of POT models, there is a choice between a fully parametric approach based on the GPD and a semi-parametric approach centered around the so-called Hill estimator. POT models are generally considered more efficient in modeling limited data sets, as they are not as reliant on large data sets as BM models and thus not as wasteful of data, see @gilli2006 and @mcneil2015quantitative. Since extreme data, by its very nature, is generally scarce, BM models have been largely superseded in practice by methods based on POT models, which instead uses all the data that exceed a particular designated high threshold. For this reason, the POT method will be used in this thesis. More specifically, the fully parametric POT approach based on the GPD will be used in the estimation of ES. 
+
+A short introduction to the general theory behind both BM and POT models are given in the following sections, which are mainly adapted from @embrechts1997modelling and @mcneil2015quantitative.
+
+### Block maxima-based models
+
+Consider a sequence of independently and identically distributed random variables $(X_i)_{i \in \mathbb N}$, here representing financial losses such as operational losses, insurance losses and losses on a credit portfolio over fixed time intervals.
+
+In EVT, the *generalized extreme value (GEV) distribution* has a role analogous to that of the normal distribution in the central limit theory for sums of random variables.
+
+In classical EVT, we are concerned with limiting distributions for normalized maxima. Denote the maximum of $n$ independently and identically distributed random variables $X_1, X_2, \dots,X_n$ by $M_n = \text{max}\{X_1,X_2,\dots, X_n\}$ (also referred to as an $n$-block maximum). Then, the only possible non-degenerate[^1] limiting distributions for normalized maxima as $n \rightarrow \infty$ are in the GEV family, defined as follows. 
+
+[^1]: By a non-degenerate distribution function is meant a distribution that is not concentrated on a single point.
+
+```{definition, gev, name = "The generalized extreme value distribution"}
+
+The distribution function of the standard GEV distribution is given by
+
+\begin{equation}
+H_{\xi}(x) = 
+\begin{cases}
+\text{exp}(-(1 +\xi x)^{-1/\xi}) , &  \xi \ \neq\ 0, \\
+\text{exp}(-e^{-x}), & \xi \ =\ 0, \\ 
+\end{cases}
+(\#eq:gev)
+\end{equation}
+
+```
+
+where $1 + \xi x > 0$. A three-parameter family is obtained by defining $H_{\xi, \mu, \sigma}(x):= H_{\xi}((x-\mu)/\sigma)$ for a location parameter $\mu \in \mathbb R$ and a scale parameter $\sigma > 0$.
+
+The parameter $\xi$ is called the *shape* parameter of the GEV distribution, and $H_\xi$ defines a *type* of distribution, i.e. a family of distributions specified up to location and scaling. The extreme value distribution in Definition \@ref(def:gev) is generalized in the sense that the parametric form subsumes three types of distributions that are known by other names according to the value of $\xi$, namely:
+
+The Fréchet distribution when $\xi > 0$, with CDF
+
+```{=tex}
+\begin{equation}
+H_{\xi}(x) = 
+\begin{cases}
+\text{exp} [ -(1 + \xi(\frac{x-\mu}{\sigma})^{-1/\xi}], & \text{if}\ x \ >\ -1/\xi, \\
+0, & \text{otherwise}. 
+\end{cases}
+(\#eq:Frechet)
+\end{equation}
+```
+
+The Gumbel distribution when $\xi = 0$, with CDF
+
+```{=tex}
+\begin{equation}
+H_{\xi}(x) = \text{exp}[-\text{exp}(-(\frac{x-\mu}{\sigma}))], \quad -\infty < x < \infty.
+(\#eq:Gumbel)
+\end{equation}
+```
+
+The Weibull distribution when $\xi < 0$, with CDF
+
+```{=tex}
+\begin{equation}
+H_{\xi}(x) = 
+\begin{cases}
+\text{exp}[-(1+\xi(\frac{x-\mu}{\sigma}))^{-1/\xi}] , & \text{if}\ x \ <\ -1/\xi, \\
+0, & \text{otherwise}. 
+\end{cases}
+(\#eq:Weibull)
+\end{equation}
+```
+
+The distribution function and density of the GEV distribution for the three cases presented above are shown in Figure \@ref(fig:gevDist).
+
+```{r gevDist, cache=TRUE, echo = FALSE, fig.cap='The df (left) and density (right) of a standard GEV distribution in three cases, corresponding to the Gumbel, Fréchet and Weibull distributions, respectively.', out.width='100%', fig.pos="H", fig.asp=.75, fig.align='center'}
+
+library(ggplot2)
+library(latex2exp)
+library(evd)
+library(patchwork)
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+gev_density <- ggplot(data.frame(x = c(-2, 7)), aes(x = x)) +
+  stat_function(aes(color = "1"), fun = function(x){dgev(x, loc = 0, scale = 1, shape = 0, log = FALSE)}, size = 1.5) +
+  stat_function(aes(color = "2"), fun = function(x){dgev(x, loc = 0, scale = 1, shape = 0.5, log = FALSE)}, size = 1.5) +
+  stat_function(aes(color = "3"), fun = function(x){dgev(x, loc = 0, scale = 1, shape = -0.5, log = FALSE)}, size = 1.5) +
+  theme_minimal() +
+  xlab("x") + 
+  ylab("density") +
+  theme(legend.position = c(-0.2, -0.1),
+        legend.direction = "horizontal") +
+  scale_colour_manual(values=cbp1, labels = 
+                        unname(TeX(c("$\\xi = 0$ (Gumbel)",
+                                     "$\\xi = 0.5$ (Fréchet)",
+                                     "$\\xi = -0.5$ (Weibull)"))))
+
+
+gev_distribution <- ggplot(data.frame(x = c(-2, 7)), aes(x = x)) +
+  stat_function(aes(color = "1"), fun = function(x){pgev(x, loc = 0, scale = 1, shape = 0)}, size = 1.5) +
+  stat_function(aes(color = "2"), fun = function(x){pgev(x, loc = 0, scale = 1, shape = 0.5)}, size = 1.5) +
+  stat_function(aes(color = "3"), fun = function(x){pgev(x, loc = 0, scale = 1, shape = -0.5)}, size = 1.5) +
+  theme_minimal() +
+  xlab("x") + 
+  ylab("density") +
+  scale_colour_manual(values=cbp1, guide = FALSE, labels = 
+                        unname(TeX(c("$\\xi = 0$ (Gumbel)",
+                                     "$\\xi = 0.5$ (Fréchet)",
+                                     "$\\xi = -0.5$ (Weibull)"))))
+
+gev_distribution + gev_density
+```
+
+Now, supposing that the maxima $M_n$ of independently and identically distributed random variables converge in distribution as $n \rightarrow \infty$ under an appropriate normalization. Having that $P(M_n \leq x) = F^{n}(x)$, this convergence means that there exists sequences of real constants $d_n$ and $c_n$ where $c_n > 0$ for all $n$ such that
+
+```{=tex}
+\begin{equation}
+\lim_{n \to \infty} P((M_n - d_n)/c_n \leq x) = \lim_{n \to \infty} F^{n}(c_{n}x + d_n) = H(x),
+(\#eq:limitingdist)
+\end{equation}
+```
+for some non-degenerate distribution function $H(x)$. The role of the GEV distribution in the study of maxima is formalized by the following definition and theorem.
+
+```{definition, name = "Maximum domain of attraction"}
+
+If Equation \@ref(eq:limitingdist) holds for some non-degenerate distribution function $H$, then $F$ is said to be in the maximum domain of attraction (MDA) of $H$, written $F \in \text{MDA}(H)$.
+
+```
+
+```{theorem, gnedenko, name = "The Fisher-Tippett-Gnedenko theorem"}
+
+If $F \in \text{MDA}(H)$ for some non-degenerate distribution function $H$, then $H$ must be a distribution of type $H_{\xi}$, i.e. a GEV distribution. 
+
+```
+
+### Peaks-over-threshold-based models
+
+As was mentioned in the introduction to this section, the BM method has the major defect of being very wasteful of valuable data since it only retains the maximum losses in large blocks. In contrast, methods based on so-called threshold exceedances or *peaks-over-thresholds* uses all data that exceed a particular threshold. The main distribution model for such exceedances over thresholds is the generalized Pareto distribution (GPD), which is introduced next.
+
+For a random quantity $X$ with distribution function $F(x)$, @pickands1975statistical has shown that under certain conditions, $F(x \vert u) = P(X \leq u +x\vert X>u)$ can be approximated by a GPD, which is defined as follows.
+
+```{definition, gpd, name = "GPD"}
+
+The distribution function of the GPD is given by
+
+\begin{equation}
+G_{\xi, \beta}(x) = 
+\begin{cases}
+1 - (1 + \xi x / \beta)^{-1/\xi}, & \text{if}\ \xi \ \neq\ 0 \\
+1 - \exp(-x\beta), & \text{if}\ \xi \ =\ 0. 
+\end{cases}
+(\#eq:GPD)
+\end{equation}
+  
+```
+
+Like the GEV distribution defined in Definition \@ref(def:gev), the GPD is generalized in the sense that it contains a number of special cases: when $\xi > 0$ the distribution function $G_{\xi, \beta}$ is that of an ordinary Pareto distribution with $\alpha = 1/\xi$. When $\xi = 0$, we have an exponential distribution and when $\xi < 0$ we have a short-tailed Pareto type II distribution. Figure \@ref(fig:gpdDist) shows the GPD distribution function and density for these three different cases.
+
+```{r gpdDist, cache=TRUE, echo = FALSE, fig.cap='The df (left) and density (right) of a standard GPD distribution in three cases, corresponding to the exponential, Pareto and Pareto type II distributions, respectively.', out.width='100%', fig.pos="H", fig.asp=.75, fig.align='center'}
+
+library(ggplot2)
+library(latex2exp)
+library(evd)
+library(patchwork)
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+gpd_density <- ggplot(data.frame(x = c(0, 8)), aes(x = x)) +
+  stat_function(aes(color = "1"), fun = function(x){dgpd(x, loc = 0, scale = 1, shape = 0, log = FALSE)}, size = 1.5) +
+  stat_function(aes(color = "2"), fun = function(x){dgpd(x, loc = 0, scale = 1, shape = 0.5, log = FALSE)}, size = 1.5) +
+  stat_function(aes(color = "3"), fun = function(x){dgpd(x, loc = 0, scale = 1, shape = -0.5, log = FALSE)}, size = 1.5) +
+  theme_minimal() +
+  xlab("x") + 
+  ylab("density") +
+  theme(legend.position = c(-0.2, -0.1),
+        legend.direction = "horizontal") +
+  scale_colour_manual(values=cbp1, labels = 
+                        unname(TeX(c("$\\xi = 0$ (exponential)",
+                                     "$\\xi = 0.5$ (Pareto)",
+                                     "$\\xi = -0.5$ (Pareto type II)"))))
+
+
+gpd_distribution <- ggplot(data.frame(x = c(0, 8)), aes(x = x)) +
+  stat_function(aes(color = "1"), fun = function(x){pgpd(x, loc = 0, scale = 1, shape = 0)}, size = 1.5) +
+  stat_function(aes(color = "2"), fun = function(x){pgpd(x, loc = 0, scale = 1, shape = 0.5)}, size = 1.5) +
+  stat_function(aes(color = "3"), fun = function(x){pgpd(x, loc = 0, scale = 1, shape = -0.5)}, size = 1.5) +
+  theme_minimal() +
+  xlab("x") + 
+  ylab("density") +
+  scale_colour_manual(values=cbp1, guide = FALSE, labels = 
+                        unname(TeX(c("$\\xi = 0$ (exponential)",
+                                     "$\\xi = 0.5$ (Pareto)",
+                                     "$\\xi = -0.5$ (Pareto type II)"))))
+
+gpd_distribution + gpd_density
+
+```
+
+The role of the GPD in EVT is as a natural model for the so-called *excess distribution* over a high threshold, which is defined as follows.
+
+```{definition, excessdist, name = "Excess distribution over threshold $u$"}
+
+Let $X$ be a random variable with distribution function $F$. The excess distribution over the threshold $u$ has distribution function
+
+\begin{equation}
+F_{u}(x) = P(X - u \leq x \vert X > u) = \frac{F(x + u) - F(u)}{1 - F(u)},
+(\#eq:excessdist)
+\end{equation}
+  
+for $0 \leq x < x_F - u$, where $x_F \leq \infty$ is the right endpoint of $F$.
+
+```
+
+A related concept that also plays an important role in EVT is that of the *mean excess function*, which has the following definition.
+
+```{definition, meanexcess, name = "Mean excess function"}
+
+The mean excess function of a random variable $X$ with finite mean is given by
+
+\begin{equation}
+e(u) = E(X - u \vert X > u).
+(\#eq:meanexcess)
+\end{equation}
+  
+
+```
+
+The excess distribution function $F_u$ describes the distribution of the excess loss over the threshold $u$, given that $u$ is exceeded. The mean excess function $e(u)$ expresses the mean of $F_u$ as a function of $u$. In general, if X has distribution function $F = G_{\xi, \beta}$, then, following Equation \@ref(eq:excessdist), the excess distribution function is
+
+```{=tex}
+\begin{equation}
+F_{u}(x) = G_{\xi, \beta (u)}(x), \quad \beta (u) = \beta + \xi u,
+(\#eq:excessdistGPD)
+\end{equation}
+```
+where $0 \leq x < \infty$ if $\xi \geq 0$ and $0 \leq x \leq -(\beta / \xi) - u$ if $\xi < 0$. Using Equation \@ref(eq:excessdistGPD) and the mean of the GPD, which is $E(X) = \beta / (1-\xi)$, the mean excess function of the GPD can be found to equal
+
+```{=tex}
+\begin{equation}
+e(u) = \frac{\beta (u)}{1 - \xi} = \frac{\beta + \xi u}{1 - \xi},
+(\#eq:meanexcessGPD)
+\end{equation}
+```
+where $0 \leq u < \infty$ if $0 \leq \xi < 1$ and $0 \leq u \leq -\beta / \xi$ if $\xi < 0$. The mean excess function is linear in the threshold $u$, which is one of the characterizing properties of the GPD.
+
+The following theorem shows that the GPD is a natural limiting excess distribution for many underlying loss distributions.
+
+```{theorem, pickands, name = "The Pickands-Balkema-de Haan theorem"}
+
+We can find a (positive-measurable function) $\beta (u)$ such that 
+
+\begin{equation}
+\lim_{u \to x_F} \sup_{0 \leq x < x_{F-u}} \vert F_{u}(x) - G_{\xi, \beta (u)} (x) \vert = 0,
+(\#eq:pickands)
+\end{equation}
+
+if and only if $F \in \text{MDA} (H_{\xi}), \xi \in \mathbb R$
+
+```
+
+Theorem \@ref(thm:pickands) is a very widely applicable result that essentially shows that the GPD is the *canonical distribution* for modeling excess losses over high thresholds. It underlies modeling based on the GPD.
+
+Figure \@ref(fig:bmpotplot) gives a graphical representation of the conceptual difference between the BM model (left panel) and the POT model (right panel). As seen, the BM model considers the maximum value for a specific time period, e.g. monthly or yearly, where the variables $X_2, X_5, X_7$ and $X_{11}$ correspond to the block maxima for each such period. The POT model instead considers all observations above a specified threshold (represented by the gray horizontal line), in which case the variables $X_1, X_2, X_5, X_7, X_8, X_9$ and $X_{11}$ are considered as the extreme events. 
+
+```{r, bmpotplot, cache = FALSE, echo = FALSE, fig.cap='A graphical representation of the difference between the BM model (left) and the POT model (right).', out.width='80%', fig.pos="H", fig.asp=.75, fig.align='center'}
+library(ggplot2)
+library(patchwork)
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+lollipop <- data.frame("X" = 1:13, 
+                       "Y" = c(5, 7, 3, 2, 4, 1, 8, 5, 7, 3, 5, 2, 3),
+                       "Name" = c("X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "X11", "X12", "X13"))
+
+pot_example <- ggplot(lollipop) +
+  geom_point(aes(X, Y, color = ifelse(Y > 3.2, cbp1[7], cbp1[1])), size = 3) +
+  geom_segment(aes(x = X,
+                   xend = X,
+                   y = 0,
+                   yend = Y, color = ifelse(Y>3.2, cbp1[7], cbp1[1])), size = 0.5) +
+  scale_color_identity() +
+  theme_minimal() +
+  geom_hline(yintercept = 3.2, linetype = "dashed", colour = cbp1[2], size = 1) +
+  geom_text(aes(X, Y, label=ifelse(Y>3.2,as.character(Name),'')),hjust=-0.5,vjust=-0) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+
+
+bm_example <- ggplot(lollipop) +
+  geom_point(aes(X, Y, color = ifelse(X == 2 | X == 5 | X == 7 | X == 11, cbp1[7], cbp1[1])), size = 3) +
+  geom_segment(aes(x = X,
+                   xend = X,
+                   y = 0,
+                   yend = Y, color = ifelse(X == 2 | X == 5 | X == 7 | X == 11, cbp1[7], cbp1[1])), size = 0.5) +
+  scale_color_identity() +
+  theme_minimal() +
+  geom_text(aes(X, Y, label=ifelse(X == 2 | X == 5 | X == 7 | X == 11,as.character(Name),'')),hjust=-0.5,vjust=-0) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+
+(bm_example + pot_example)
+
+```
+
+
+### Modeling risk measures with EVT  {#sec:modelingrisk}
+
+#### Modeling excess losses
+
+As has been stated in the above, the focus of this thesis will be on POT models. POT models use the GPD as the main distribution model for exceedances over thresholds. 
+
+We first circle back to Theorem \@ref(thm:pickands). Assuming that we have a loss distribution $F \in \text{MDA}(H_\xi)$ such that, for some high threshold $u$, we can model $F_u$ by a GPD. This builds on the assumption that $F$ is a loss distribution with right endpoint $x_F$ and that we for some high threshold $u$ have $F_{u}(x)=G_{\xi, \beta}(x)$ for $0 \leq x < x_F-u$ and some $\xi \in \mathbb R$ and $\beta > 0$.
+
+The method for modeling exceedances is then as follows. Given loss data $X_1, X_2, \dots, X_n$ from $F$, a random number of observations will exceed the threshold $u$. Labeling the total number of observations exceeding the threshold $u$, i.e. the total number of exceedances, as $N_u$ and the corresponding observations as $\tilde X_1, \tilde X_2, \dots, \tilde X_n$, we calculate $Y_j = \tilde X_j - u$ of the excess loss for each of these exceedances. The aim is to estimate the parameters of a GPD model by fitting the distribution to the $N_u$ excess losses. This can be done in several ways, with the most common method being by way of maximum likelihood estimation, a method which has been extensively studied in an EVT framework (examples include @davison1984, @smith1984 and @grimshaw1993computing). Alternative methods include the probability-weighted moment (PWM) method [@hosking1987parameter] and the elemental percentile method [@castillo1997fitting]. In this thesis, the focus will be on maximum likelihood estimation. The method of finding the maximum likelihood estimates of the GPD is shown in Appendix \@ref(sec:mle).
+
+#### Choice of threshold 
+
+Utilising the POT method to model extreme values requires that a suitable threshold $u$ is chosen. This threshold basically serves as a cut-off above which the GPD is (hopefully) a suitable model. The choice of the threshold $u$ is for this reason an important, but unfortunately not a trivial, task. The higher the threshold is set, the fewer observations there are for estimating the parameters of the GPD, making the estimates less reliable. A lower threshold implies that more observations are available for parameter estimation, but comes with the trade-off that observations above the (lower) threshold might not conform to the GPD [@christoffersen2011elements]. There exists no readily applicable algorithm (yet) for selecting a suitable threshold [@gilli2006]. One common method for trying to make an informed decision regarding the choice of threshold builds on the *mean excess function*, which is given by
+
+```{=tex}
+\begin{equation}
+e(v) = \frac{\beta + \xi (v-u)}{1-\xi} = \frac{\xi v}{1 - \xi} + \frac{\beta - \xi u}{1 - \xi},
+(\#eq:meanexcessfunction)
+\end{equation}
+```
+
+where $u \leq v < \infty$ if $0 \leq \xi < 1$ and $u \leq v \leq u - \beta/\xi$ if $\xi < 0$. The mean excess function in Equation \@ref(eq:meanexcessfunction) is linear in $v$, and this is commonly exploited as the basis for a graphical method for choosing an appropriate threshold based on the so-called *sample mean excess plot*. 
+
+For positive-valued loss data $X_1, X_2, \dots, X_n$, the sample mean excess function is defined to be an empirical estimator of the mean excess function in Definition \@ref(def:meanexcess), the estimator of which is given by
+
+```{=tex}
+\begin{equation}
+e_{n}(v) = \frac{\sum_{i=1}^{n}(X_i - v)I_{\{X_i > v\}}}{\sum_{i =1}^{n}I_{\{X_i > v\}}}.
+(\#eq:meanexcessest)
+\end{equation}
+```
+
+A mean excess plot is then constructed. If the data support a GPD model over a high threshold, then Equation \@ref(eq:meanexcessfunction) suggests that this plot should become increasingly "linear" for higher values of $v$. In this context, a linear upward trend indicates a GPD model with positive shape parameter $\xi$ and a plot tending towards being horizontal indicates a GPD with approximately a zero shape parameter, i.e. an exponential excess distribution. Finally, a linear downward trend indicates a GPD with a negative shape parameter. 
+
+An example[^meplotexample] of a sample mean excess plot is shown in Figure \@ref(fig:meplotex). 
+
+```{r, include = FALSE}
+library(evir)
+library(tidyverse)
+
+data(danish)
+
+meplot_danish <- meplot(danish)
+
+df <- as.data.frame(do.call(cbind, meplot_danish))
+
+df_t <- as_tibble(df)
+```
+
+
+```{r meplotex, cache=FALSE, echo = FALSE, fig.cap='Example of a sample mean excess plot based on the Danish fire insurance dataset.', out.width='80%', fig.pos="H", fig.asp=.75, fig.align='center'}
+
+library(ggplot2)
+library(latex2exp)
+library(patchwork)
+library(evir)
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+meplot_example <- ggplot(df, aes(x, y)) +
+  geom_point(size = 1.5, color = cbp1[7]) +
+  ylab("Mean excess") +
+  xlab("Threshold") +
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(0, 60, by = 10)) +
+  scale_y_continuous(breaks = seq(0, 120, by = 20))
+
+meplot_example
+
+```
+
+Here, we see that the plot is fairly linear over the entire range, and the upwards slope suggests that a GPD with a positive shape parameter $\xi$ could be fitted for the data. There is a small kink forming after a threshold of 10, which suggests that $u = 10$ might be a sensible starting point as a choice of threshold. 
+
+The method of using the sample mean excess plot for determining a suitable threshold suffers from the major drawback of being subjective (and sometimes highly so); it is not always apparent when and where the linearity "ceases" and there can also be several distinct linear parts. As an alternative, the threshold can simply be set such that some proportion of the distribution is above the threshold. @nystrom2002framework suggests that the threshold be set such that 10% of the distribution is above the threshold; other choices that could be equally suitable are 5% and 15%. 
+
+#### Estimation of the tail and risk measures
+
+Using the GPD model described previously to model excess losses, we can proceed to estimate the tail of the underlying loss distribution $F$ and the associated risk measure, in this case ES.
+
+The formula for *tail probabilities*, for $x \geq u$, is given by
+
+```{=tex}
+\begin{equation}
+\begin{aligned}
+\bar F (x) &= P(X >u)P(X > x \vert X >u)\ \\
+& = \bar F (u)P(X-u > x- u \vert X > u)\ \\
+& = \bar F (u) \bar F_u (x-u)\ \\
+& = \bar F (u) \left(1 + \xi \frac{x-u}{\beta} \right)^{-1\xi}.
+\end{aligned}
+(\#eq:tailprob)
+\end{equation}
+```
+
+By inverting Equation \@ref(eq:tailprob), we can obtain a high quantile of the underlying distribution, which in turn can be interpreted as VaR. Then, for $\alpha \geq F(u)$, VaR equals
+
+```{=tex}
+\begin{equation}
+\text{VaR}_{\alpha} = q_{\alpha}(F) = u + \frac{\beta}{\xi} \left( \left (  \frac{1-\alpha}{\bar F(u)}  \right)^{-\xi} -1 \right).
+(\#eq:VaRest)
+\end{equation}
+```
+
+For $\xi < 1$, the ES is calculated as
+
+```{=tex}
+\begin{equation}
+\text{ES}_{\alpha} = \frac{1}{1-\alpha} \int_{\alpha}^{1} q_{x}(F)\text{dx} = \frac{\text{VaR}_{\alpha}}{1 - \xi} + \frac{\beta - \xi u}{1 - \xi}.
+(\#eq:ESest)
+\end{equation}
+```
+
+If a GPD has been fitted to excess losses over a threshold $u$ in the manner described above, the quantities can be estimated by replacing $\xi$ and $\beta$ in Equations \@ref(eq:tailprob)--\@ref(eq:ESest) by their corresponding estimates. This also requires an estimate of $\bar F(u)$, for which the simple empirical estimator $N_u/n$ is often used.[^empiricalestimator] An estimator for tail probabilities, which was first proposed by @smith1987estimating, can then be obtained, on the form
+
+```{=tex}
+\begin{equation}
+\hat{\bar{{F}}}(x) = \frac{N_u}{n}\left(1 + \hat \xi \frac{x - u}{\hat \beta} \right)^{-1/ \hat \xi}.
+(\#eq:tailprobest)
+\end{equation}
+```
+
+Equation \@ref(eq:tailprobest) is, however, only valid for $x \geq u$. 
+
+For $\alpha \geq 1 - N_u$, analogous point estimators of $\text{VaR}_{\alpha}$ and $\text{ES}_{\alpha}$ are obtained from Equations \@ref(eq:VaRest) and \@ref(eq:ESest). To do this, we can set a high threshold $u = L_{k+1, n}$ at the $(k+1)$-upper-order statistic and fit a GPD distribution to excess losses over $u$. It is thereby possible to obtain the maximum likelihood estimates $\hat \xi$ and $\hat \beta$ based on $k$ exceedances over the threshold. In order to form a quantile estimator, the value $k$ must satisfy $k/n > 1 - \alpha$, where $k$ should be sufficiently large to give reasonably accurate estimates of the GPD parameters. It follows then that the risk measure estimates for $\text{VaR}_{\alpha}$ and $\text{ES}_{\alpha}$, respectively, are
+
+```{=tex}
+\begin{equation}
+\widehat{\text{VaR}}_{\alpha} = u + \frac{\hat \beta}{\hat \xi}\left(\left( \frac{1-\alpha}{k/n} \right)^{- \hat \xi} -1 \right),
+(\#eq:VaRestimate)
+\end{equation}
+```
+
+```{=tex}
+\begin{equation}
+\widehat{\text{ES}}_{\alpha} = \frac{\widehat{\text{VaR}}_{\alpha}}{1-\hat \xi} + \frac{\hat \beta - \hat \xi u}{1-\hat \xi}.
+(\#eq:ESestimate)
+\end{equation}
+```
+
+
+
+[^meplotexample]: The data comes from the well-studied Danish fire insurance data, which consists of 2,156 fire insurance losses over 1,000,000 Danish kroner from 1980 to 1990, expressed in units of 1,000,000 kroner. Data accessed via the function `data(danish)` in the `{evir}` R package. 
+
+[^empiricalestimator]: By using the empirical estimator $N_u/n$, we are implicitly assuming that there is a sufficient proportion of sample values above the threshold $u$ to reliably estimate $\bar F(u)$. 
+
+[^riskmeasures]: The interested reader can consult @crouhy2000comparative, which gives an extensive overview of different approaches to risk quantification.
+
+<!--chapter:end:sections/02-method.Rmd-->
+
+# Data and methodology {#sec:data}
+
+## Methodological aspects
+
+### Financial returns
+
+Our main interest in the context of this thesis are the *returns* of financial assets. More specifically, we are interested in the (large) negative returns, more commonly known as losses. If we let $P_t$ represent the daily closing price of a particular assets at time $t$, the simple gross return $R_t$, i.e. the return from $t-1$ to $t$, is defined as
+
+```{=tex}
+\begin{equation}
+1 + R_t = \frac{P_t}{P_{t-1}}.
+(\#eq:grossreturn)
+\end{equation}
+```
+
+The continuously compounded return (the "log return"), $r_t$, is then defined as the natural logarithm of Equation \@ref(eq:grossreturn), that is
+
+```{=tex}
+\begin{equation}
+r_t = \text{log}(1 + R_t) = \text{log}(\frac{P_t}{P_{t-1}}) = \text{log}(P_t) - \text{log}(P_{t-1}).
+(\#eq:logreturn)
+\end{equation}
+```
+
+The so-called loss return $X_t$ at time $t$ represents the negative log-return $r_t$ and is thus defined simply as
+
+```{=tex}
+\begin{equation}
+X_t = -r_t.
+(\#eq:lossreturn)
+\end{equation}
+```
+
+$X_t$ therefore represents losses as positive values. The percentage *loss* in value from time $t-1$ to $t$ is then calculated as
+
+```{=tex}
+\begin{equation}
+L_t = 100(1-\text{exp}(r_t)) = 100(1-\text{exp}(-X_t)),
+(\#eq:percloss)
+\end{equation}
+```
+
+where positive values of $L_t$ represent percentage losses and negative values represent percentage gains. Since we are interested in the large losses in the context of this thesis, the general focus will be on daily values of $L_t > 0$, which, as said, represents the daily percentage losses. 
+
+### Implementation
+
+The implementation of the theoretical aspects and their application to the empirical data is done via R [@R]. EVT-specific applications have been made available through the R packages `{evir}` [@evir] and `{qrmtools}` [@qrmtools], which have been used for these purposes in this thesis.
+
+## Data exposition
+
+As was stated in the introduction, the estimation ES will be performed on data representing (or trying to represent) the entire spectrum of the financial markets, namely equity, fixed income, currency exchange rates, commodities, and, in the name of modernity, cryptocurrencies. Equity will be represented by the Swedish OMXS30 index[^OMXS30data], which represents the 30 largest companies on the Nasdaq Stockholm exchange. Fixed income is represented by the OMRXBOND index[^OMRXBONDdata], which includes bonds issued by the Swedish state. Currency exchange rates will be represented by the SEK/EUR exchange rate and commodities gets its representation through Brent crude[^SEKEURBRENTdata], which also serves a function as a reference for pricing oil, making it suitable as a broad representation of commodities. Lastly, cryptocurrencies is represented by what most think of when it comes to this asset class -- the "millennials' gold" -- namely, Bitcoin[^BITCOINdata]. 
+
+[^OMXS30data]: The OMXS30 price data comes from www.borsdata.se (paid subscription).
+[^OMRXBONDdata]: The OMRXBOND price data comes from www.nasdaqomxnordic.com.
+[^SEKEURBRENTdata]: The SEK/EUR and Brent crude price data comes from www.borsdata.se (paid subscription). 
+[^BITCOINdata]: The Bitcoin price data comes from www.coindesk.com. 
+
+```{r, echo = FALSE, message = FALSE}
+
+library(tidyverse)
+library(forecast)
+library(scales)
+library(readxl)
+library(janitor)
+library(quantmod)
+library(tidyquant)
+library(lubridate)
+theme_set(theme_minimal())
+
+
+
+# --------------------- BITCOIN ---------------------
+
+# Get the bitcoin data
+
+bitcoin <- read_xlsx("Bitcoin.xlsx", 2) %>% 
+  clean_names() %>%                                         # Clean names
+  mutate(log_return = c(diff(log(closeprice)), NA))
+
+# Separate out log return
+
+bitcoin_log_return <- bitcoin %>% 
+  select(date, log_return) %>% 
+  filter(log_return != "NA",
+         log_return != 0) %>% 
+  mutate(neg_log_return = -log_return,
+         perc_loss = 100*(1-exp(log_return)),
+         neg_perc_loss = -perc_loss)
+
+# See https://rstudio-pubs-static.s3.amazonaws.com/78839_afca73ae18194eaf8f1b86d399dde969.html for a possible solution
+
+# Store as a ts object for time series
+
+
+# --------------------- OMXS30 ---------------------
+
+omxs30 <- read_xlsx("OMXS3020y.xlsx", 3) %>% 
+  clean_names() %>%                                         # Clean names
+  mutate(log_return = c(diff(log(closeprice)), NA))
+
+omxs30_log_return <- omxs30 %>% 
+  select(date, log_return) %>% 
+  filter(log_return != "NA",
+         log_return != 0) %>% 
+  mutate(neg_log_return = -log_return,
+         perc_loss = 100*(1-exp(log_return)),
+         neg_perc_loss = -perc_loss)
+
+# Store as a ts object for time series
+
+
+# --------------------- Brent Crude ---------------------
+
+brent_crude <- read_xlsx("LCOc1-Brent Crude.xlsx", 2) %>% 
+  clean_names() %>%                                         # Clean names
+  mutate(log_return = c(diff(log(closeprice)), NA))
+
+brent_crude_log_return <- brent_crude %>% 
+  select(date, log_return) %>% 
+  filter(log_return != "NA",
+         log_return != 0) %>% 
+  mutate(neg_log_return = -log_return,
+         perc_loss = 100*(1-exp(log_return)),
+         neg_perc_loss = -perc_loss)
+
+
+# --------------------- SEK/EUR ---------------------
+
+sek_eur <- read_xlsx("SEKEUR-SEK_EUR.xlsx", 2) %>% 
+  clean_names() %>%                                         # Clean names
+  mutate(log_return = c(diff(log(closeprice)), NA))
+
+sek_eur_log_return <- sek_eur %>% 
+  select(date, log_return) %>% 
+  filter(log_return != "NA",
+         log_return != 0) %>% 
+  mutate(neg_log_return = -log_return,
+         perc_loss = 100*(1-exp(log_return)),
+         neg_perc_loss = -perc_loss)
+
+
+# --------------------- US 10 year treasury ---------------------
+
+#t10y <- getSymbols(Symbols = "DGS10", src = "FRED", auto.assign = #FALSE)
+
+#t10yd <- data.frame(date = index(t10y), coredata(t10y))
+
+#treasury <- t10yd %>% 
+#  rename("price" = "DGS10") %>% 
+#  filter(date >= "2001-04-23" & date <= "2021-04-23") %>% 
+#  mutate(log_return = c(diff(log(price)), NA))
+
+#treasury_log_return <- treasury %>% 
+#  select(date, log_return) %>% 
+#  filter(log_return != "NA",
+#         log_return != 0) %>% 
+#  mutate(neg_log_return = -log_return,
+#         perc_loss = 100*(1-exp(log_return)),
+#         neg_perc_loss = -perc_loss)
+
+treasury <- read_xlsx("OMRXBOND.xlsx") %>% 
+  rename("price" = "close") %>% 
+  filter(date <= "2021-04-23") %>% 
+  mutate(price = as.numeric(price),
+         log_return = c(diff(log(price)), NA))
+
+treasury_log_return <- treasury %>% 
+  select(date, log_return) %>% 
+  filter(log_return != "NA",
+         log_return != 0) %>% 
+  mutate(neg_log_return = -log_return,
+         perc_loss = 100*(1-exp(log_return)),
+         neg_perc_loss = -perc_loss)
+
+
+
+```
+
+The data consists of daily closing prices for each of the assets. For each observation, the log return was first computed (which excludes the first observation in each series) as per Equation \@ref(eq:logreturn). From this, the daily percentage losses were calculated as per Equation \@ref(eq:percloss). Table \@ref(tab:descriptives) gives an overview of the start date, end date and number of observations for the data pertaining to each asset class.
+
+```{r, descriptives, echo = FALSE, message = FALSE, fig.pos = "H"}
+
+library(dplyr)
+library(moments)
+library(kableExtra)
+
+descriptive_stats <- 
+  data.frame("Asset" = c("OMXS30", "Bitcoin", "Brent crude", "SEK/EUR", "OMRXBOND"),
+                 "Start" = c(as.character(min(omxs30$date)), 
+                             as.character(min(bitcoin$date)), 
+                             as.character(min(brent_crude$date)), 
+                             as.character(min(sek_eur$date)), 
+                             as.character(min(treasury$date))),
+                 "End" = c(as.character(max(omxs30$date)), 
+                           as.character(max(bitcoin$date)), 
+                           as.character(max(brent_crude$date)), 
+                           as.character(max(sek_eur$date)), 
+                           as.character(max(treasury$date))),
+                 "N" = c(nrow(omxs30_log_return), 
+                         nrow(bitcoin_log_return),
+                         nrow(brent_crude_log_return),
+                         nrow(sek_eur_log_return),
+                         nrow(treasury_log_return)))
+
+kbl(descriptive_stats, caption = "Start and end date of each time series and the number of observations.", booktabs = T, align = "c") %>% row_spec(0, bold = TRUE) %>% kable_styling(latex_options = "HOLD_position")
+
+```
+
+Figure \@ref(fig:assets) shows the daily closing price and the (positive and negative) percentage losses for each asset class for the relevant period. 
+
+```{r assets, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Daily closing prices (left) and percentage losses (right) of each asset.', out.width='100%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+library(ggplot2)
+library(latex2exp)
+library(evd)
+library(patchwork)
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+p_bitcoin_log_return <- 
+  ggplot(bitcoin_log_return, aes(x = date, y = perc_loss)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab(" ") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_bitcoin_close <- 
+  ggplot(bitcoin, aes(x = date, y = closeprice)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab("Bitcoin") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_omxs30_log_return <- 
+  ggplot(omxs30_log_return, aes(x = date, y = perc_loss)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab(" ") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_omxs30_close <- 
+  ggplot(omxs30, aes(x = date, y = closeprice)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab("OMXS30") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_brent_crude_log_return <- 
+  ggplot(brent_crude_log_return, aes(x = date, y = perc_loss)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab(" ") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_brent_crude_close <- 
+  ggplot(brent_crude, aes(x = date, y = closeprice)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab("Brent Crude") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_sek_eur_log_return <- 
+  ggplot(sek_eur_log_return, aes(x = date, y = perc_loss)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab(" ") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_sek_eur_close <- 
+  ggplot(sek_eur, aes(x = date, y = closeprice)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab("SEK/EUR") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_treasury_log_return <- 
+  ggplot(treasury_log_return, aes(x = date, y = perc_loss)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab(" ") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_treasury_close <- 
+  ggplot(treasury, aes(x = date, y = price)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab("OMRXBOND") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE)) +
+  scale_y_continuous(breaks = c(5000, 5500, 6000))
+
+
+(p_bitcoin_close | p_bitcoin_log_return) /
+(p_omxs30_close | p_omxs30_log_return) /
+(p_brent_crude_close | p_brent_crude_log_return) /
+(p_sek_eur_close | p_sek_eur_log_return) /
+(p_treasury_close | p_treasury_log_return)
+
+```
+
+From Figure \@ref(fig:assets), we can see clear signs of the phenomenon known as *volatility clustering*, i.e. that large changes tend to be followed by large changes and small changes tend to be followed by small changes (though not necessarily in the same direction).[^volatilityclustering]
+
+Table \@ref(tab:table1) gives an overview of the descriptive statistics for the percentage loss data for the assets.  
+
+```{r table1, echo=FALSE, message=FALSE, fig.pos="H"}
+
+library(dplyr)
+library(moments)
+library(kableExtra)
+
+col_names <- c("OMXS30", "Bitcoin", "Brent Crude", "SEK/EUR", "OMRXBOND")
+
+means     <- c(format(round((mean(omxs30_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((mean(bitcoin_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((mean(brent_crude_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((mean(sek_eur_log_return$perc_loss)), 5), nsmall =5, scientific = F),
+               format(round((mean(treasury_log_return$perc_loss)), 5), nsmall =5))
+
+stddev    <- c(format(round((sd(omxs30_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((sd(bitcoin_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((sd(brent_crude_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((sd(sek_eur_log_return$perc_loss)), 5), nsmall =5),
+               format(round((sd(treasury_log_return$perc_loss)), 5), nsmall =5))
+
+skewness  <- c(format(round((skewness(omxs30_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((skewness(bitcoin_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((skewness(brent_crude_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((skewness(sek_eur_log_return$perc_loss)), 5), nsmall =5),
+               format(round((skewness(treasury_log_return$perc_loss)), 5), nsmall =5))
+
+kurtosis  <- c(format(round((kurtosis(omxs30_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((kurtosis(bitcoin_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((kurtosis(brent_crude_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((kurtosis(sek_eur_log_return$perc_loss)), 5), nsmall =5),
+               format(round((kurtosis(treasury_log_return$perc_loss)), 5), nsmall =5))
+
+min       <- c(format(round((min(omxs30_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((min(bitcoin_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((min(brent_crude_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((min(sek_eur_log_return$perc_loss)), 5), nsmall =5),
+               format(round((min(treasury_log_return$perc_loss)), 5), nsmall =5))
+
+max       <- c(format(round((max(omxs30_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((max(bitcoin_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((max(brent_crude_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((max(sek_eur_log_return$perc_loss)), 5), nsmall =5),
+               format(round((max(treasury_log_return$perc_loss)), 5), nsmall =5))
+
+descriptives <- data.frame("Asset" = c("OMXS30", "Bitcoin", "Brent crude", "SEK/EUR", "OMRXBOND"),
+                 "Mean" = means,
+                 "Std.Dev." = stddev,
+                 "Skewness" = skewness,
+                 "Kurtosis" = kurtosis,
+                 "Min" = min, 
+                 "Max" = max)
+
+kbl(descriptives, caption = "Descriptives statistics for each asset.", booktabs = T, align = "c") %>% row_spec(0, bold = TRUE) %>% kable_styling(latex_options = "HOLD_position")
+
+```
+
+There are some things to note in Table \@ref(tab:table1). First, we can see that Bitcoin had both the largest daily gain and largest daily loss during the relevant period, with the largest daily gain being substantially higher than the largest daily loss. Second place in this category is taken by Brent crude, which also exhibit rather large daily swings during the period. The SEK/EUR currency and the OMRXBOND index proved to be the least volatile in terms of daily swings during the period, with the OMXS30 being somewhere in the middle. 
+
+Of particular note here is the kurtosis. Kurtosis is a measure of the "tailedness"[^kurtosis] of a distribution. The normal distribution has a kurtosis of 3, and a distribution with a kurtosis deviating from this value suggests fatter tails and thus, that a normality assumption might not be an appropriate approximation for the underlying distribution. From the above, we see that all assets have a kurtosis above 3, which therefore suggests that they are heavy-tailed (or at least "heavier-tailed" than the normal distribution). To the surprise of no one, Bitcoin and Brent crude exhibits the highest kurtosis of the assets.  
+
+Lingering on the kurtosis point, we can further investigate the kurtosis by examining so-called quantile-quantile (Q-Q) plots, shown in Figure \@ref(fig:qqplots).
+
+```{r, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Q-Q plots for each asset, comparing sample quantiles to the theoretical quantiles.', out.width='100%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+library(ggplot2)
+library(latex2exp)
+library(evd)
+library(patchwork)
+theme_set(theme_minimal())
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+# Create QQ for OMXS30
+
+qq_omxs30 <- ggplot(as.data.frame(omxs30_log_return$perc_loss), aes(sample = omxs30_log_return$perc_loss))
+
+p_qq_omxs30 <- qq_omxs30 + stat_qq(colour = cbp1[7], size = 0.75) + stat_qq_line(colour = cbp1[1], size = 0.75, alpha = 0.5) +
+  ylab("OMXS30") +
+  xlab(" ")
+
+# Create QQ for bitcoin
+
+qq_bitcoin <- ggplot(as.data.frame(bitcoin_log_return$perc_loss), aes(sample = bitcoin_log_return$perc_loss))
+
+p_qq_bitcoin <- qq_bitcoin + stat_qq(colour = cbp1[7], size = 0.75) + stat_qq_line(colour = cbp1[1], size = 0.75, alpha = 0.5) +
+  ylab("Bitcoin") +
+  xlab(" ")
+
+# Create QQ for Brent
+
+qq_brent <- ggplot(as.data.frame(brent_crude_log_return$perc_loss), aes(sample = brent_crude_log_return$perc_loss))
+
+p_qq_brent <- qq_brent + stat_qq(colour = cbp1[7], size = 0.75) + stat_qq_line(colour = cbp1[1], size = 0.75, alpha = 0.5) +
+  ylab("Brent crude") +
+  xlab(" ")
+
+# Create QQ for SEK/EUR
+
+qq_sek <- ggplot(as.data.frame(sek_eur_log_return$perc_loss), aes(sample = sek_eur_log_return$perc_loss))
+
+p_qq_sek <- qq_sek + stat_qq(colour = cbp1[7], size = 0.75) + stat_qq_line(colour = cbp1[1], size = 0.75, alpha = 0.5) +
+  ylab("SEK/EUR") +
+  xlab(" ")
+
+# Create QQ for treasury
+
+qq_treasury <- ggplot(as.data.frame(treasury_log_return$perc_loss), aes(sample = treasury_log_return$perc_loss))
+
+p_qq_treasury <- qq_treasury + stat_qq(colour = cbp1[7], size = 0.75) + stat_qq_line(colour = cbp1[1], size = 0.75, alpha = 0.5) +
+  ylab("OMRXBOND") +
+  xlab(" ")
+
+
+
+```
+
+
+```{r, qqplots, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Q-Q plots for each asset, comparing sample quantiles to the theoretical quantiles.', out.width='100%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+library(patchwork)
+
+(p_qq_omxs30 | p_qq_bitcoin) /
+(p_qq_brent | p_qq_sek) /
+(p_qq_treasury + plot_spacer())
+
+```
+
+
+If the data came from a normal distribution, the sample points would line on a straight line with the theoretical quantiles. From the above, we see quite clearly that a normality assumption is not realistic for these series since the tails are heavier, confirming what we saw in terms of kurtosis. This does indeed suggest that an EVT approach is reasonable for estimating ES on the basis of these time series, which we turn to next. 
+
+[^kurtosis]: Kurtosis is a measure of "tailedness", i.e. how the tails of a probability distribution behaves and is defined as $\text{Kurt}[X] = \frac{E[(X-\mu)^4]}{(E[(X-\mu)^2])^2}$. The more the kurtosis differs from 3, the "fatter" the tails of the distribution. There is a common misconception that kurtosis also measures the "peakedness" of a distribution, but this notion is dispelled by @westfall2014kurtosis. 
+
+[^volatilityclustering]: Volatility clustering was first observed by @mandelbrot1963 and the empirical property has been document by @granger1995some and @ding1996modeling, among many others. 
+
+
+\newpage 
+
+
+
+<!--chapter:end:sections/03-data.Rmd-->
+
+<!-- # Results -->
+# Results {#sec:results}
+
+```{r, include = FALSE}
+
+library(qrmtools)
+library(evir)
+
+### FITTING A GPD TO EACH SERIES ###############################################
+
+### Set the thresholds based on mean excess plots ##############################
+
+omxs30_threshold <- 1
+
+bitcoin_threshold <- 0.25
+
+brent_threshold <- 2.3
+
+sek_eur_threshold <- 0.82
+
+treasury_threshold <- 2.25
+
+treasury_threshold_subsequent <- 0.25
+
+### 1. Fit a GPD to OMXS30 excesses ############################################
+
+exceed_omxs30 <- omxs30_log_return$perc_loss[omxs30_log_return$perc_loss > omxs30_threshold] # exceedances
+excess_omxs30 <- exceed_omxs30 - omxs30_threshold # excesses
+(fit_omxs30 <- fit_GPD_MLE(excess_omxs30)) # MLE
+shape.u_omxs30 <- fit_omxs30$par[["shape"]]
+scale.u_omxs30 <- fit_omxs30$par[["scale"]]
+
+### Extract SE for the parameters and the percentage of exceedances
+
+gpdfitomxs30 <- gpd(omxs30_log_return$perc_loss, omxs30_threshold)
+
+xi_se_omxs30 <- gpdfitomxs30$par.ses[1]
+beta_se_omxs30 <- gpdfitomxs30$par.ses[2]
+
+
+### 2. Fit a GPD to Bitcoin excesses ###########################################
+
+exceed_bitcoin <- bitcoin_log_return$perc_loss[bitcoin_log_return$perc_loss > bitcoin_threshold] # exceedances
+excess_bitcoin <- exceed_bitcoin - bitcoin_threshold # excesses
+(fit_bitcoin <- fit_GPD_MLE(excess_bitcoin)) # MLE
+shape.u_bitcoin <- fit_bitcoin$par[["shape"]]
+scale.u_bitcoin <- fit_bitcoin$par[["scale"]]
+
+### Extract SE for the parameters and the percentage of exceedances
+
+gpdfitbitcoin <- gpd(bitcoin_log_return$perc_loss, bitcoin_threshold)
+
+xi_se_bitcoin <- gpdfitbitcoin$par.ses[1]
+beta_se_bitcoin <- gpdfitbitcoin$par.ses[2]
+
+### 3. Fit a GPD to Brent crude excesses #######################################
+
+exceed_brent <- brent_crude_log_return$perc_loss[brent_crude_log_return$perc_loss > brent_threshold] # exceedances
+excess_brent <- exceed_brent - brent_threshold # excesses
+(fit_brent <- fit_GPD_MLE(excess_brent)) # MLE
+shape.u_brent <- fit_brent$par[["shape"]]
+scale.u_brent <- fit_brent$par[["scale"]]
+
+### Extract SE for the parameters and the percentage of exceedances
+
+gpdfitbrent <- gpd(brent_crude_log_return$perc_loss, brent_threshold)
+
+xi_se_brent <- gpdfitbrent$par.ses[1]
+beta_se_brent <- gpdfitbrent$par.ses[2]
+
+### 4. Fit a GPD to SEK/EUR excesses #######################################
+
+exceed_sek_eur <- sek_eur_log_return$perc_loss[sek_eur_log_return$perc_loss > sek_eur_threshold] # exceedances
+excess_sek_eur <- exceed_sek_eur - sek_eur_threshold # excesses
+(fit_sek_eur <- fit_GPD_MLE(excess_sek_eur)) # MLE
+shape.u_sek_eur <- fit_sek_eur$par[["shape"]]
+scale.u_sek_eur <- fit_sek_eur$par[["scale"]]
+
+### Extract SE for the parameters and the percentage of exceedances
+
+gpdfitsek <- gpd(sek_eur_log_return$perc_loss, sek_eur_threshold)
+
+xi_se_sek <- gpdfitsek$par.ses[1]
+beta_se_sek <- gpdfitsek$par.ses[2]
+
+### 5. Fit a GPD to Treasury excesses #######################################
+
+exceed_treasury <- treasury_log_return$perc_loss[treasury_log_return$perc_loss > treasury_threshold_subsequent] # exceedances
+excess_treasury <- exceed_treasury - treasury_threshold_subsequent # excesses
+(fit_treasury <- fit_GPD_MLE(excess_treasury)) # MLE
+shape.u_treasury <- fit_treasury$par[["shape"]]
+scale.u_treasury <- fit_treasury$par[["scale"]]
+
+### Extract SE for the parameters and the percentage of exceedances
+
+gpdfittreasury <- gpd(treasury_log_return$perc_loss, treasury_threshold_subsequent)
+
+xi_se_treasury <- gpdfittreasury$par.ses[1]
+beta_se_treasury <- gpdfittreasury$par.ses[2]
+
+```
+
+## Estimating the excess losses
+
+The first step in estimating ES is to model the excess losses for each of the assets, which in this thesis is done according to the unconditional POT model as further described in Section \@ref(sec:method) above. 
+
+Modeling the excess losses first requires choosing an adequate threshold $u$ above which we fit a GPD to the excess losses, hoping to obtain an adequate model for the largest -- the most extreme -- losses. The choice of the threshold $u$ will in this thesis be made through the inspection of mean excess plots, following the methodology outlined in Section \@ref(sec:modelingrisk). Even though this method is somewhat (and sometimes highly) subjective, as mentioned earlier, it is one of the few methods available for the purpose of making an informed decision about a suitable threshold. Figures \@ref(fig:omxs30meplot)--\@ref(fig:treasurymeplot) in Appendix \@ref(sec:meplots) shows the mean excess plots of the *positive* daily percentage losses $L_t$ for each asset, i.e. negative percentage losses (gains) are omitted in these plots (since they do not interest us in this context). 
+
+As can be seen in these mean excess plots, none of them are perfectly linear (or even close to being perfectly linear). This obviously makes the choice of threshold more difficult, since what we are looking for is a point in the plot after which there is a somewhat stable linearity present, with the absence of any wild swings up or down. However, even for data that are truly generalized Pareto distributed, the sample mean excess plot is seldom perfectly linear, which is especially apparent towards the right-hand end of the plot. This is so because we are here averaging a small number of excesses (since the very extreme values are few). These end-points are often omitted from consideration as they can distort the overall picture. @mcneil2015quantitative suggest that, if there is visual evidence that the mean excess plot shows a trend of (stable) linearity, the threshold $u$ should be set to a value towards the beginning of the linear section of the mean excess plot.
+
+Following this recommendation, the threshold for each asset is chosen at a point where the mean excess plot gives a visual indication of a budding and stable linearity. This, as pointed out above, is indeed a highly subjective exercise. The threshold values chosen have been marked with a vertical line in the respective mean excess plot, and their exact numerical values are shown in Table \@ref(tab:pointestimates). 
+
+With a method this subjective, the last thing we want is for the chosen threshold to have a large impact on the subsequent estimation procedure, especially the shape parameter $\xi$. One way to further guide the decision of a suitable threshold is to fit the GPD shape parameter $\xi$ as a function of the threshold and plot these for a range of threshold values. Such plots are called *shape plots*. Using shape plots, we are then able to visualize how the shape parameter $\xi$ is affected by different values of $u$. Shape plots for each of the assets are shown in Appendix \@ref(sec:shapeplots). The Y-axis of these plots shows different values of the shape parameter $\xi$ (solid line), together with 95% confidence bands (dotted lines). The lower X-axis shows the value of the threshold and the upper X-axis the number of excesses (which decreases with an increasing threshold value $u$). The vertical line represents the threshold $u$ chosen previously and the horizontal line represents a value of the shape parameter $\xi = 0.25$, above which line the models have an infinite fourth moment (kurtosis), i.e. the tail "never ends". Obviously, we want the value of $\xi$ to be stable for as large a range of threshold values as possible, i.e. the line should be as flat as possible after the point of the threshold. 
+
+For the OMXS30 percentage loss data, the threshold chosen after inspection of the mean excess plot was $u =$ `r omxs30_threshold`%. We see in Figure \@ref(fig:omxs30shapeplot) that the value of the shape parameter $\xi$ remains fairly stable up to a value of $u$ of about 3, after which point it starts a somewhat linear increase. The mean excess plot does indeed suggest that a threshold can be found above which a GPD approximation to the excess distribution is reasonable. The value of the threshold $u$ chosen initially for these data seems to be reasonable as it is within the range mentioned previously, i.e. where there is a flat trend in the relevant shape plot.
+
+As seen in Figure \@ref(fig:bitcoinshapeplot), the threshold for the Bitcoin percentage loss data was chosen at the very start of the series, and we see in the shape plot that the shape parameter $\xi$ remains remarkably stable throughout a range of threshold values, and never crosses the horizontal line. Again, it should be possible to fit a GPD to the excesses above the threshold and achieve a sensible model. Thus, the conclusion here is that the threshold chosen for Bitcoin percentage loss data, $u =$ `r bitcoin_threshold`%, seems to be reasonable, and it will be the value used in the subsequent estimation.  
+
+Figure \@ref(fig:brentshapeplot) shows the shape plot for the Brent crude percentage loss data. We see that the value of the shape parameter $\xi$ remains fairly stable in the approximate range of $2$% $< u <$ $3$%, after which there is an initial increase and a subsequent (linear) decrease. The threshold chosen for the Brent crude data based on the corresponding mean excess plot is $u =$ `r brent_threshold`%, which seems reasonable here since it is within the "stable range" indicated above. The conclusion is that it also for the Brent crude percentage loss data should be possible to fit a GPD to approximate the excess distribution. 
+
+For the SEK/EUR percentage loss data, we see in Figure \@ref(fig:sekshapeplot) that the shape parameter $\xi$ is highly unstable, with no signs of a flat trend. The threshold chosen, $u =$ `r sek_eur_threshold`%, is slightly above the point at which the model has infinite kurtosis. Here, the choice of threshold is difficult since, as said, there is no clear flat trend apparent in the plot. For now, the threshold chosen initially will be kept. At this stage however, it is unclear whether the GPD is suitable for modeling the excess distribution, a point which we will have reasons to return to. 
+
+Finally, the OMRXBOND percentage loss data in Figure \@ref(fig:treasuryshapeplot) shows that the threshold $u =$ `r treasury_threshold_subsequent`% intersects at a point at which the shape plot line starts to flatten out and show a somewhat stable trend, but only until a threshold of around $u = 0.28$% is reached, after which there is some up-and-down gyration. The initial threshold chosen does seem reasonable, at least for a narrow range of threshold values. Based on this information, it is reasonable to assume that a GPD can be fitted to the excess distribution (this point will also be returned to later). 
+
+One additional thing to note in the shape plots for all assets is that the confidence intervals widens with an increasing threshold; this further stresses the importance of choosing a threshold that is not too high as the parameter estimates -- the shape parameter $\xi$ in this case -- becomes increasingly uncertain. 
+
+With the thresholds thus chosen, we are able to calculate the excesses above the threshold for the respective asset. To determine whether a GPD approximation to the excess distribution $\hat F(x-u)$ is reasonable for each asset, Figures \@ref(fig:empomxs30)--\@ref(fig:emptreasury) in Appendix \@ref(sec:empplots) shows plots of the empirical distribution of excesses and the fitted GPD. For these, we see a very good correspondence between the empirical estimates and the GPD curve for the OMXS30, Bitcoin and Brent crude percentage loss data. The difficulties posed by the SEK/EUR data in choosing a threshold is confirmed by the corresponding empirical distribution plot; the correspondence between the empirical estimates and the GPD curve is less than satisfactory, implying that a GPD might not be a suitable approximation for this data. The OMRXBOND percentage loss data gives a somewhat similar picture, indicating that a GPD may be an unsuitable model for that data as well. 
+
+Table \@ref(tab:pointestimates) gives an overview of the threshold $u$, the number of exceedances $N_u$ (with the proportion of the total observations above the threshold within parentheses) as well as point estimates for the shape parameter $\xi$ and the scale parameter $\beta$ (with the standard error for the respective parameter estimate within parentheses) for each asset. 
+
+
+```{r, include = FALSE}
+
+### CALCULATING ES FOR EACH SERIES #############################################
+
+### Load package
+
+library(evir)
+
+### Set the confidence levels ##################################################
+
+alpha <- c(0.99, 0.995, 0.999)
+
+### 1. Calculate ES for OMXS30 #################################################
+
+out_omxs30 <- gpd(omxs30_log_return$perc_loss, omxs30_threshold)
+
+es_omxs30 <- riskmeasures(out_omxs30, alpha)
+
+tp_omxs30 <- tailplot(out_omxs30)
+
+ci_99_omxs30 <- gpd.sfall(tp_omxs30, alpha[1])
+
+ci_995_omxs30 <- gpd.sfall(tp_omxs30, alpha[2])
+
+ci_999_omxs30 <- gpd.sfall(tp_omxs30, alpha[3])
+
+### 2. Calculate ES for Bitcoin ################################################
+
+out_bitcoin <- gpd(bitcoin_log_return$perc_loss, bitcoin_threshold)
+
+es_bitcoin <- riskmeasures(out_bitcoin, alpha)
+
+tp_bitcoin <- tailplot(out_bitcoin)
+
+ci_99_bitcoin <- gpd.sfall(tp_bitcoin, alpha[1])
+
+ci_995_bitcoin <- gpd.sfall(tp_bitcoin, alpha[2])
+
+ci_999_bitcoin <- gpd.sfall(tp_bitcoin, alpha[3])
+
+### 3. Calculate ES for Brent crude ############################################
+
+out_brent <- gpd(brent_crude_log_return$perc_loss, brent_threshold)
+
+es_brent <- riskmeasures(out_brent, alpha)
+
+tp_brent <- tailplot(out_brent)
+
+ci_99_brent <- gpd.sfall(tp_brent, alpha[1])
+
+ci_995_brent <- gpd.sfall(tp_brent, alpha[2])
+
+ci_999_brent <- gpd.sfall(tp_brent, alpha[3])
+
+### 4. Calculate ES for SEK/EUR ################################################
+
+out_sek <- gpd(sek_eur_log_return$perc_loss, sek_eur_threshold)
+
+es_sek_eur <- riskmeasures(out_sek, alpha)
+
+tp_sek <- tailplot(out_sek)
+
+ci_99_sek <- gpd.sfall(tp_sek, alpha[1])
+
+ci_995_sek <- gpd.sfall(tp_sek, alpha[2])
+
+ci_999_sek <- gpd.sfall(tp_sek, alpha[3])
+
+### 5. Calculate ES for Treasury ###############################################
+
+out_treasury <- gpd(treasury_log_return$perc_loss, treasury_threshold_subsequent)
+
+es_treasury <- riskmeasures(out_treasury, alpha)
+
+tp_treasury <- tailplot(out_treasury)
+
+ci_99_treasury <- gpd.sfall(tp_treasury, alpha[1])
+
+ci_995_treasury <- gpd.sfall(tp_treasury, alpha[2])
+
+ci_999_treasury <- gpd.sfall(tp_treasury, alpha[3])
+
+```
+
+
+```{r, pointestimates, echo = FALSE, include = TRUE, message = FALSE, fig.pos = "H"}
+library(knitr)
+library(kableExtra)
+library(tibble)
+
+point_estimates <- tibble(Asset = c("OMXS30", "Bitcoin", "Brent crude", "SEK/EUR", "OMRXBOND"),
+                          `$u$` =c(omxs30_threshold, bitcoin_threshold, brent_threshold, sek_eur_threshold, treasury_threshold_subsequent),
+                          
+                          `$N_u$` =c(
+                            paste(length(exceed_omxs30), " (", sprintf("%.3f", 1-gpdfitomxs30$p.less.thresh), ")", sep = ""), 
+                            paste(length(exceed_bitcoin), " (", sprintf("%.3f", 1-gpdfitbitcoin$p.less.thresh), ")", sep = ""), 
+                            paste(length(exceed_brent), " (", sprintf("%.3f", 1-gpdfitbrent$p.less.thresh), ")", sep = ""), 
+                            paste(length(exceed_sek_eur), " (", sprintf("%.3f", 1-gpdfitsek$p.less.thresh), ")", sep = ""), 
+                            paste(length(exceed_treasury), " (", sprintf("%.3f", 1-gpdfittreasury$p.less.thresh), ")", sep = "")
+                            ),
+                          
+                          `$\\hat \\xi$` =c(
+  
+                            paste(format(shape.u_omxs30, digits =3), " (", format(xi_se_omxs30, digits = 2), ")", sep = ""), 
+  
+                            paste(format(shape.u_bitcoin, digits =3), " (", format(xi_se_bitcoin, digits = 2), ")", sep = ""), 
+  
+                            paste(format(shape.u_brent, digits =3), " (", format(xi_se_brent, digits = 2), ")", sep = ""), 
+  
+                            paste(format(shape.u_sek_eur, digits =3), " (", sprintf("%.3f", xi_se_sek), ")", sep = ""), 
+  
+                            paste(format(shape.u_treasury, digits =3), " (", sprintf("%.3f", xi_se_treasury), ")", sep = "")
+),
+
+                            `$\\hat \\beta$` =c(
+  
+                              paste(sprintf("%.3f", scale.u_omxs30), " (", sprintf("%.3f", beta_se_omxs30), ")", sep = ""), 
+  
+                              paste(sprintf("%.3f", scale.u_bitcoin), " (", format(beta_se_bitcoin, digits = 2), ")", sep = ""), 
+  
+                              paste(sprintf("%.3f", scale.u_brent), " (", format(beta_se_brent, digits = 2), ")", sep = ""), 
+  
+                              paste(sprintf("%.3f", scale.u_sek_eur), " (", format(beta_se_sek, digits = 2), ")", sep = ""), 
+  
+                              paste(sprintf("%.3f", scale.u_treasury), " (", format(beta_se_treasury, digits = 2), ")", sep = ""))
+)
+
+kbl(point_estimates, caption = "Overview of the threshold, the number of exceedances and point estimates of the shape and scale parameter for each of the assets.", booktabs = T, escape = FALSE, align = "c") %>% row_spec(0, bold = TRUE) %>% kable_styling(latex_options = "HOLD_position")
+
+```
+
+There are a few observations to be made in relation to Table \@ref(tab:pointestimates). First of all, we see that almost half of all observations for the Bitcoin percentage loss data is above the threshold chosen for the data. This proportion is much higher than for even the data with the second highest proportion of observations above the threshold, being the OMXS30 percentage loss data. We can also note that a very small proportion of the total observations are above the chosen threshold for the SEK/EUR and the OMRXBOND percentage loss data. The proportion of observations above the threshold is obviously directly determined by the threshold chosen for the data (which in this thesis was made on the basis of mean excess plots). It is, however, interesting to see the large differences between the assets in this respect. 
+
+As regards the standard errors for the estimates of the shape parameter $\xi$ and the scale parameter $\beta$, we see that these are fairly small for the OMXS30, Bitcoin and Brent crude percentage loss data. The standard errors for the SEK/EUR and OMRXBOND percentage loss data, however, are high, at least in relation to the standard errors for the other assets just mentioned. These larger standard errors for the SEK/EUR and OMRXBOND percentage loss data are no doubt (at least partially) a consequence of the small proportion of observations above the threshold. This is the case since the fewer observations there are above the threshold, the fewer observations there are available for estimating the parameters of the GPD. For these, we also see that the standard errors cover a value of $\hat \xi \geq 0.25$, the point at which the model has an infinite fourth moment. Due to the high standard errors, there is reason to be concerned about the reliability of the estimates of $\xi$ and $\beta$ for the SEK/EUR and OMRXBOND percentage loss data. 
+
+Having done the estimation of the shape parameter $\xi$ and the scale parameter $\beta$, we can proceed with modeling the tail and the measure of tail risk that is the focus of this thesis, namely ES. This is done in Section \@ref(sec:tailmodeling). 
+
+## Estimating tails and  measure of tail risk {#sec:tailmodeling}
+
+The estimation of ES is done for three confidence levels, namely $\alpha =$ `r 1- alpha[1]`, $\alpha =$ `r 1- alpha[2]` and $\alpha =$ `r 1- alpha[3]`. Table \@ref(tab:esestimates) gives an overview of the point estimates $\widehat{ES}_{0.01}, \widehat{ES}_{0.005}$ and $\widehat{ES}_{0.001}$, as well as the corresponding quantiles and the upper and lower confidence interval for each asset at the respective confidence level. 
+
+
+```{r, esestimates, echo = FALSE, include = TRUE, message = FALSE, fig.pos = "H"}
+library(knitr)
+library(kableExtra)
+library(tibble)
+
+point_estimates <- tibble("Asset" = c("$\\operatorname{ES}_{0.01}$", "$\\operatorname{ES}_{0.005}$", "$\\operatorname{ES}_{0.001}$", "$\\operatorname{ES}_{0.01}$", "$\\operatorname{ES}_{0.005}$", "$\\operatorname{ES}_{0.001}$", "$\\operatorname{ES}_{0.01}$", "$\\operatorname{ES}_{0.005}$", "$\\operatorname{ES}_{0.001}$", "$\\operatorname{ES}_{0.01}$", "$\\operatorname{ES}_{0.005}$", "$\\operatorname{ES}_{0.001}$", "$\\operatorname{ES}_{0.01}$", "$\\operatorname{ES}_{0.005}$", "$\\operatorname{ES}_{0.001}$"),
+                          
+                          "Point estimate" =c(format(es_omxs30[1,3], digits = 3, nsmall = 2), format(es_omxs30[2,3], digits = 3, nsmall = 2), format(es_omxs30[3,3], digits = 3, nsmall = 2), 
+                                              
+                                              format(es_bitcoin[1,3], digits = 3, nsmall = 2), format(es_bitcoin[2,3], digits = 3, nsmall = 2), format(es_bitcoin[3,3], digits = 3, nsmall = 2), 
+                                              
+                                              format(es_brent[1,3], digits = 3, nsmall = 2), format(es_brent[2,3], digits = 3, nsmall = 2), format(es_brent[3,3], digits = 3, nsmall = 2), 
+                                              
+                                              format(es_sek_eur[1,3], digits = 3, nsmall = 2), format(es_sek_eur[2,3], digits = 3, nsmall = 2), format(es_sek_eur[3,3], digits = 3, nsmall = 2), 
+                                              
+                                              format(es_treasury[1,3], digits = 3, nsmall = 2), format(es_treasury[2,3], digits = 2, nsmall = 2), format(es_treasury[3,3], digits = 2, nsmall = 2)),
+                          
+                          "Quantile" =c(format(es_omxs30[1,2], digits = 3, nsmall = 2), format(es_omxs30[2,2], digits = 3, nsmall = 2), format(es_omxs30[3,2], digits = 3, nsmall = 2), 
+                                              
+                                        format(es_bitcoin[1,2], digits = 3, nsmall = 2), format(es_bitcoin[2,2], digits = 3, nsmall = 2), format(es_bitcoin[3,2], digits = 3, nsmall = 2), 
+                                              
+                                        format(es_brent[1,2], digits = 3, nsmall = 2), format(es_brent[2,2], digits = 3, nsmall = 2), format(es_brent[3,2], digits = 3, nsmall = 2), 
+                                              
+                                        format(es_sek_eur[1,2], digits = 3, nsmall = 2), format(es_sek_eur[2,2], digits = 3, nsmall = 2), format(es_sek_eur[3,2], digits = 3, nsmall = 2), 
+                                              
+                                        format(es_treasury[1,2], digits = 2, nsmall = 2), format(es_treasury[2,2], digits = 2, nsmall = 2), format(es_treasury[3,2], digits = 3, nsmall = 2)),
+                          
+                          "Lower CI" =c(format(ci_99_omxs30[1], digits =3, nsmall = 2), 
+                                        format(ci_995_omxs30[1], digits =3, nsmall = 2), 
+                                        format(ci_999_omxs30[1], digits =3, nsmall = 2), 
+                                        format(ci_99_bitcoin[1], digits =3, nsmall = 2), 
+                                        format(ci_995_bitcoin[1], digits =3, nsmall = 2), 
+                                        format(ci_999_bitcoin[1], digits =3, nsmall = 2), 
+                                        format(ci_99_brent[1], digits =3, nsmall = 2), 
+                                        format(ci_995_brent[1], digits =3, nsmall = 2), 
+                                        format(ci_999_brent[1], digits =3, nsmall = 2), 
+                                        format(ci_99_sek[1], digits =3, nsmall = 2), 
+                                        format(ci_995_sek[1], digits =3, nsmall = 2), 
+                                        format(ci_999_sek[1], digits =3, nsmall = 2), 
+                                        format(ci_99_treasury[1], digits =2, nsmall = 2), 
+                                        format(ci_995_treasury[1], digits =2, nsmall = 2), 
+                                        format(ci_999_treasury[1], digits =3, nsmall = 2)),
+                          
+                          "Upper CI" =c(format(ci_99_omxs30[3], digits =3, nsmall = 2), 
+                                        format(ci_995_omxs30[3], digits =3, nsmall = 2), 
+                                        format(ci_999_omxs30[3], digits =3, nsmall = 2), 
+                                        format(ci_99_bitcoin[3], digits =3, nsmall = 2), 
+                                        format(ci_995_bitcoin[3], digits =3, nsmall = 2), 
+                                        format(ci_999_bitcoin[3], digits =3, nsmall = 2), 
+                                        format(ci_99_brent[3], digits =3, nsmall = 2), 
+                                        format(ci_995_brent[3], digits =3, nsmall = 2), 
+                                        format(ci_999_brent[3], digits =3, nsmall = 2), 
+                                        format(ci_99_sek[3], digits =3, nsmall = 2), 
+                                        format(ci_995_sek[3], digits =3, nsmall = 2), 
+                                        format(ci_999_sek[3], digits =3, nsmall = 2), 
+                                        format(ci_99_treasury[3], digits =2, nsmall = 2), 
+                                        format(ci_995_treasury[3], digits =3, nsmall = 2), 
+                                        format(ci_999_treasury[3], digits =3, nsmall = 2)))
+
+kbl(point_estimates, caption = "ES point estimates for different confidence levels with associated quantiles and upper and lower confidence interval bounds.", booktabs = T, escape = FALSE, align = "c") %>% 
+  row_spec(0, bold = TRUE) %>% kable_styling(latex_options = "HOLD_position") %>% 
+  pack_rows("OMXS30", 1, 3) %>% 
+  pack_rows("Bitcoin", 4, 6) %>% 
+  pack_rows("Brent crude", 7, 9) %>% 
+  pack_rows("SEK/EUR", 10, 12) %>% 
+  pack_rows("OMRXBOND", 13, 15)
+  
+
+```
+
+Since we have used daily percentage losses in the modeling, the point estimates shown in Table \@ref(tab:esestimates) correspond to the expected daily percentage loss in the 1%, 0.5% and 0.1% of worst cases. One thing to note is that the ES point estimate increases for all assets with a lower $\alpha$. This is obviously the case since the values of $\alpha$ in this case corresponds to the expectation in the 1%, 0.5% and 0.1% of worst cases; the expected loss is higher the further into to the tail we venture, and it is there that the extremal events occur. 
+
+In Table \@ref(tab:esestimates) above, we also see that Bitcoin, by far, has the highest ES point estimate at all confidence levels, followed by the corresponding point estimates for the Brent crude and then the OMXS30 data. In fact, Bitcoin sticks out in a negative way here; "investors" in Bitcoin can expect to lose between almost one-fifth to one-third of their capital in the 1% to 0.1% worst cases *on a single day*. Bitcoin has had a steep ascent indeed, but this only makes the eventual descent that much more painful. The ES point estimates for the SEK/EUR and OMRXBOND data are both much smaller than for the other three asset, with the OMRXBOND data exhibiting very small ES estimates. If we define risk as the potential daily loss in some worst-case scenario, then we can conclude that Bitcoin, without competition, is the riskiest asset, and the OMRXBOND index the safest. This conclusion likely rhymes well with what most would expect without having studied the data in detail. As for the confidence interval for the point estimates, there is not much to be said. These are, for all assets, within reasonable bounds and there is no confidence interval that sticks out in terms of being very wide in relation to the point estimate it relates to. 
+
+Figures \@ref(fig:omxs30rmplot)--\@ref(fig:treasuryrmplot) in Appendix \@ref(sec:tailprobabilities) summarizes the information in Table \@ref(tab:esestimates) for each asset. These are plots of the estimated tail probabilities (on a logarithmic scale). The smooth curve running through the points is the tail estimator as calculated by Equation \@ref(eq:tailprobest). The points correspond to the threshold exceedances $N_u$, which are plotted at Y-values that correspond to the tail of the empirical distribution function. Overlaid in these plots are also the ES point estimates at each confidence level (dotted vertical lines), as well as curves corresponding to the confidence intervals for the respective confidence level $\alpha$ (red dotted curves).
+
+From the plots of the estimated tail probabilities, we can see that the OMXS30, Bitcoin and Brent crude percentage loss data fit the tail rather satisfactorily, with exception for the most extreme (of the already extreme) observations. This is again a sign that an EVT approach to modeling ES for these data is reasonable. 
+
+For the SEK/EUR and OMRXBOND data, however, the fit to a GPD of the most extreme values above the threshold chosen is not satisfactory, which suggest that a GPD simply is not a good approximation for the extreme values exhibited by these assets. This less-than-satisfactory fit could be due to the thresholds chosen being too low, since a threshold that is set too low leads to the exceedances above the threshold not conforming to the GPD. Simply put, if too many "non-extreme" observations are being forced upon the GPD, the fit of these observations will be sub-optimal. However, the shape plots in Appendix \@ref(sec:shapeplots) shows that the thresholds chosen for these assets lie to the far right of the plots. This is confirmed in Table \@ref(tab:pointestimates), in which we saw that only a small proportion of all observations for these assets lie above the threshold. Choosing a higher threshold, therefore, would lead to even fewer than the already rather meager number of exceedances being available for estimation of the parameters of the GPD. This, in turn, would lead to even more uncertain estimates (i.e. larger standard errors) of the shape and scale parameters, $\xi$ and $\beta$, respectively. The conclusion, then, might simply be that an EVT approach to modeling the SEK/EUR and OMRXBOND data is not appropriate. There is further evidence for this in the corresponding ES point estimates and the corresponding confidence intervals. The ES point estimates show that these two assets are not prone to very large downward swings, even in the worst of events far out in the tail. The SEK/EUR and OMRXBOND data does simply not seem to be very prone to extreme values. They should therefore not be modeled under an EVT approach. 
+
+This concludes the estimation of ES on the empirical data. In the next section, we highlight some shortcomings of the study that has been conducted in the previous pages, offer some insight into how they can potentially be remedied or alleviated and give some suggestions for interesting topics for future research in this interesting field.
+
+
+\newpage
+
+<!--chapter:end:sections/04-results.Rmd-->
+
+<!-- # Conclusion -->
+# Discussion and conclusions {#sec:slutsats}
+
+## Introduction
+
+The aim of this thesis has been to introduce how EVT can be used in estimating ES using an unconditional peaks-over-threshold estimation method. An application of the estimation method was made on empirical data for five different assets, chosen to function as a proxy for the broader asset classes they represent. Here, we saw that some assets seem more prone to exhibiting extreme values than others, and thus, that some are better suited for an EVT-based approach. Specifically, we have seen that the OMXS30, Bitcoin and Brent crude percentage loss data seems suited for EVT-based modeling methods for the purposes of estimating ES. For the SEK/EUR and OMRXBOND percentage loss data, we saw that these data fit an EVT model less well. However, it is uncertain if these conclusion, made on the basis of the samples used herein, can be extended to the broader asset classes that these assets were assumed to represent. Is equities, cryptocurrencies and commodities in general more prone to exhibiting extreme values, and currencies and fixed income assets less so? That might very well be the case, and such a conclusion does probably align well with what most would assume regarding the riskiness of these asset classes. However, no definitive answer regarding whether this is the case or not can be given on the basis of the results presented here. It is also uncertain whether the specific conclusions made in relation to the empirical data used for the study in this thesis applies to *future* losses for these assets. For example, Bitcoin might become less prone to exhibiting extreme values in the future (due, perhaps, to increased regulation), and the OMRXBOND index more so. It is impossible to know, at least on the basis of this study. 
+
+In this final section of the thesis, we would like to highlight some of the shortcomings with the study that has been conducted and point out the implications that these shortcomings might have for the conclusions that are possible to draw from the study. We also offer some suggestions for improvements that can be made. Some ideas for further interesting studies on related topics are also introduced. 
+
+## Potential issues and points of improvement
+
+### Choice of the threshold $u$
+
+As we have seen, the choice of the threshold $u$ is a very important step in the estimation of ES using an unconditional peaks-over-threshold method since it impacts the subsequent modeling and estimation at every step. Choosing a suitable threshold involves a trade-off between having too few exceedances (making the parameter estimates more uncertain, i.e. having larger standard errors) and too many (in which case the observations above the threshold might not conform to the GPD). In this thesis, the choice of the threshold $u$ was made on the basis of mean excess plots. This is a method fraught with subjectivity since we are basing the choice upon a visual inspection, trying to locate a point in a plot after which there is some visual sign of (stable) linearity. The difficulty in making the choice of threshold based on this method also changes depending on the underlying data used in constructing the mean excess plot for that data. For example, the mean excess plot of the Danish fire insurance data, given as an example in Figure \@ref(fig:meplotex), is rather "clean" and makes the threshold choice somewhat straightforward (which is also why it was given as an example to introduce the concept of a mean excess plot). This plot should be contrasted with the much more "messy" mean excess plots of the empirical data used in this thesis, shown in Appendix \@ref(sec:meplots). These plots give much more latitude in the choice of a threshold that seems reasonable and thus more room for subjective interpretation. Ideally, we want to avoid such subjectivity.   
+
+However, as has also been mentioned previously, there exists as of yet no more "sophisticated" method for choosing an appropriate threshold. One alternative that was introduced involves simply setting the threshold such that a fixed proportion of the observations -- 10% has been suggested -- are above said threshold. This, of course, is only a rule of thumb, and it should not automatically be regarded as being more "objective" than using mean excess plots. As with all statistical rules-of-thumb (and rules-of-thumb in general), great care must be observed in applying them uncritically.  
+
+There is no "fail-safe" way of making an optimal threshold choice. When it comes down to it, making an appropriate choice of threshold is therefore perhaps more art than science. One potential remedy is to simply consider a wide range of threshold values in order to determine how they influence the modeling and the estimates. In this thesis, this was done for the shape parameter $\xi$. In Appendix \@ref(sec:shapeplots), we investigated how different threshold values (and different number of exceedances), impacted the shape parameter $\xi$. If the value of the shape parameter $\xi$ remains stable over a range of threshold values (such as what we saw for the Bitcoin percentage loss data in Figure \@ref(fig:bitcoinshapeplot)), then the choice of the exact value of the threshold $u$ is less critical for the subsequent estimation and modeling. If, however, the shape parameter $\xi$ gyrates for a range of threshold values (which, as an example, we saw in the mean excess plot for the SEK/EUR percentage loss data in Figure \@ref(fig:sekshapeplot)), then greater care must be taken in making the choice of threshold. An investigation similar to the one made for the shape parameter $\xi$ could also be performed for the ES point estimates, in order to investigate how different threshold values impacts the point estimates. A similar conclusion can be made here: if the ES point estimates exhibits highly divergent values for different threshold values, then the exact choice of threshold value must be made with greater care. 
+
+When it comes to choosing an appropriate threshold, it is not possible to give definitive advice on how to proceed and how much effort should be exerted in making an "optimal" choice. It can also be questioned whether there even is an "optimal" choice that can -- or should -- be made. At any rate, the choice of threshold must be made on a case-by-case basis, after consideration of the properties of the data being analyzed. In some cases, it will be enough to make the threshold choice on the basis of a single mean excess plots. In most other cases, however, it is advisable to make the choice based on two or more of the several methods available. An interesting topic to study would be to investigate different methods for making the threshold choice and comparing and contrasting the results. 
+
+### Volatility clustering and serial dependence
+
+In this thesis, we have modeled daily percentage losses using a so-called unconditional approach, i.e. using maximum likelihood estimation to estimate the parameters of a GPD for excess distributions. This method assumes that the time series being modeled are stationary. However, in Figure \@ref(fig:assets) we saw signs of the presence of volatility clustering in the time series for the assets. This, in turn, is a sign that there is serial dependence in the underlying data and therefore that an assumption that the series are stationary and independently and identically distributed, which underlies the modeling done in this thesis, might not be realistic. In fact, financial time series in general exhibit volatility clustering, and are thus in general not stationary. Modeling any financial time series under an assumption of stationarity and independent observations can therefore severely affect the validity of the results and the conclusions that can be drawn. No further investigation to confirm the presence (or not) of this issue has been made in this thesis, but this is obviously an important point that, as said, might might affect the conclusions that can be drawn from a study such as the present one.  
+
+An unconditional approach applied to non-stationary time series does not necessarily invalidate the results of the thesis, however. According to @mcneil2015quantitative, the maximum likelihood estimates obtained under the unconditional approach used here can be viewed as quasi-maximum likelihood estimates, where the likelihood is misspecified with respect to the serial dependence structure of the data. They point out that the point estimates should still be reasonable, but that standard errors may be too small. In this context though, underestimation of the standard errors may very well be reason enough to be careful in using an unconditional approach to estimating ES in an EVT-based framework. Ultimately, the estimation of ES -- regardless of the statistical method used in doing so -- is done in order to guide decision-making. Specifically, ES is used to inform financial decision-makers about the potential downside in some worst-case scenario, in a way that enables them to make rational financial decisions with this information in mind. Underestimation of standard errors, therefore, can imply underestimation of risk, which is obviously problematic in this context.
+
+There are several methods available to account for the serial dependence generally exhibited by financial time series. One such method is using a conditional approach that involves fitting an ARMA-GARCH model to the data, then treating the residuals from the GARCH analysis as the underlying data to which the GPD tail estimation method used in this thesis is applied. Another method is a variation of the peaks-over-threshold method, where exceedances over a threshold are viewed as events in time to which a point process approach is used to model the occurrences of these event. This latter method is also known as a marked Poisson point process, in which  the exceendance times are viewed as points and the GPD-distributed excesses (which is an assumption made under this method) as the marks. 
+
+There are many more methods available than the ones covered above, many of them building on the ARMA-GARCH framework. It is not possible to cover the nuances of all the different methods here, but it would be an interesting future study to compare the unconditional approach -- the approach used in this thesis -- to the conditional, ARMA-GARCH model or the marked Poisson point process model (or some variation thereof). Of particular interest in such a study would be the comparison of the results of different methods in order to confirm whether the point estimates are still reasonable under the unconditional approach as compared to one or several conditional approaches, as well as comparing the standard error for the estimates arrived at under the respective method. 
+
+In addition to variations on the method used in estimating ES with an EVT approach, there exists different methods for computing ES itself. There are in general three broad approaches available: (i) non-parametric historical simulation, (ii) fully parametric methods based on an econometric model with explicit assumptions on the volatility dynamics and conditional distribution and (iii) methods based on extreme value theory [@Hoogerheide2010]. The third approach has been used in this thesis, but an interesting approach for further studies would be to compare two or all different methods -- and the variations contained in each -- in order to evaluate performance.
+
+### Data considerations and temporal aspects
+
+As was stated in the introductory remarks to this section, the results we have seen here strictly only applies to the specific samples, and for the specific time periods used when collecting them, that have been used in estimating ES and drawing conclusions based on these estimates. This is the case for all statistical studies, but the hope is obviously that we can draw some more generally applicable conclusion as regards the general nature of the thing being studied. 
+
+One obvious way to broaden the conclusions that may be drawn from a study of the kind conducted here is to consider a wider range of assets, both from the same asset class as well as from different ones. In this respect, there is an almost infinite number of variations on the theme that can be made. For example, further samples from additional assets from one asset class, say equities, can be used, in order to investigate whether they exhibit similar behavior. This would allow for more broad conclusions to be drawn as it relates to that asset class. Furthermore, differentiation can be made on the basis of sectors, markets, countries and time-periods. One interesting study to conduct would be to use a similar asset from a range of different markets, in order to see whether there are differences between markets, for example if some market is "more extreme" than others. 
+
+Variations in order to achieve results that can be compared can also be made in relation to the way the relevant observations used for the empirical study are calculated. The focus of the present study has been on the daily percentage losses, calculated on the basis of the daily closing prices of the relevant assets. This time interval is not set in stone; the focus could just as reasonably have been on weekly or monthly equivalents. In fact, using weekly or monthly percentage losses might mitigate (although not completely obviate) the clustering phenomenon discussed earlier. 
+
+Again, it is not possible to cover all the possible variations that can be performed in order to arrive at interesting research topics. Suffice it to say that there are many, many ways to slice the empirical data used for the estimation of ES that can be used for further research. And this applies regardless of whether the unconditional method  is used or one of the many alternative methods available, a few of which were introduced above. 
+
+### Evaluating model performance through backtesting
+
+Backtesting is a method for evaluating a risk measure such as ES. It is performed by comparing out-of-sample estimates of a risk measure with realized historical gains and losses. Such a comparison is obviously of interest since it allows the researcher to test whether an estimation procedure is sensible in practice, i.e. whether the model conforms with what actually transpired historically. Since, as we stated above, the ultimate goal of estimating ES is to guide financial decision-making, combining estimation of ES with a backtesting procedure can add valuable insights into the actual performance of the estimates. Backtesting is of course backwards-looking -- it is not (yet?) possible to perform "forwardtesting" -- which requires some care in being too confident in the results from a backtest. 
+
+No backtesting has been performed for the ES estimates that have been estimated in this thesis, but this would without a doubt have been a valuable and useful addition to the thesis. A simple extension of this study, then, would be to perform a backtest of the ES estimates for each asset. However, if the same data, for the same time period, is used, it is likely that different ES estimates would be found, since the inclusion of a backtesting part requires that some portion of the data is held out of the estimation for performing the actual backtesting. 
+
+Many different methods for performing backtests of risk measures are available in the literature. Each method comes with its own strengths and weaknesses, as with so much else. One set of tests for backtesting purposes that could be especially useful in this context are known as *violation-based* tests. It is not possible to give a comprehensive coverage of all the different methods available and their respective strengths and weaknesses here, but it would no doubt be interesting to perform a backtest of ES estimates for different asset classes, and potentially also to compare different backtesting methods against each other. 
+
+\newpage
+
+### Bayesian models
+
+One common problem with EVT-based methods in general, and not just when applied to financial time series, is that extreme data, by its very definition, is scarce. And the scarcer the data, the less information the researcher has to perform estimation, for example. One way of enhancing the information available in the (scarce) data is to use Bayesian methods. In this way, it is possible to incorporate a diverse range of information sources outside of the extreme data itself -- e.g. in the form of subject-matter expert opinion -- into to the estimation procedure by way of the so-called prior distribution or priors. 
+
+For example, @cabras2011bayesian estimate the threshold $u$ and other parameters using suitable priors in a Bayesian approach, in which all data is modeled using a semiparametric approach for data below the threshold $u$ and the GPD for the exceedances. They account for the uncertainty of the $u$ and other GPD parameters via their posterior distributions.
+
+Using Bayesian methods together with an EVT approach to estimating ES, and risk measures in general, offers ways for researchers to approach the problem in novel ways. In a financial context, it can be especially useful for estimating ES for newer financial instrument with a shorter history. For such instruments, expert opinion on similar instruments can be incorporated to perhaps give a more complete picture.
+
+Bayesian methods used with EVT is a somewhat understudied field, at least when it comes to the context of estimating risk measures. It is therefore a field ripe for the taking for anyone daring enough to try it out, and there are likely many interesting results that could come from it. 
+
+
+
+
+<!--chapter:end:sections/05-conclusion.Rmd-->
+
+\newpage
+
+# References {-}
+<!-- # References {-} -->
+
+
+<!--
+To remove the indentation of the first entry.
+-->
+\noindent
+
+<!--
+To create a hanging indent and spacing between entries.  These three lines may need to be removed for styles that don't require the hanging indent.
+-->
+
+\setlength{\parindent}{-0.5cm}
+\setlength{\leftskip}{0.5cm}
+\setlength{\parskip}{8pt}
+
+<div id="refs"></div>
+
+<!--
+Restore to defaults
+-->
+
+\indent
+\setlength{\parindent}{17pt}
+\setlength{\leftskip}{0pt}
+\setlength{\parskip}{0pt}
+
+\newpage
+
+<!--chapter:end:sections/98-references.Rmd-->
+
+\appendix
+<!-- # Appendix -->
+
+# Appendix
+
+## Maximum likelihood estimation of the GPD {#sec:mle}
+
+Denoting the density of the GPD by $g_{\xi, \beta}$, the log-likelihood can be found to be
+
+```{=tex}
+\begin{equation}
+\begin{aligned}
+\text{ln }L(\xi, \beta; Y_1, Y_2, \dots, Y_{N_u}) &= \sum_{j=1}^{N_u}\text{ln }g_{\xi, \beta}(Y_j)\ \\
+& = -N_u \text{ ln }\beta - \left(1 + \frac{1}{\xi}\right) \sum_{j=1}^{N_u}\text{ln}\left(1 + \xi \frac{Y_j}{\beta}\right),
+\end{aligned}
+(\#eq:loglikGPD)
+\end{equation}
+```
+
+which is then maximized subject to the parameter constraints that $\beta > 0$ and $1 + \xi Y_j / \beta > 0 \quad \forall j$. Solving the maximization problem then yields a GPD model $G_{\hat \xi, \hat \beta}$ for the excess distribution $F_u$. 
+
+## The generalized inverse and the quantile function{#sec:quantiles}
+
+### The generalized inverse function
+
+Given some increasing function $T: \mathbb R \rightarrow \mathbb R$, the generalized inverse of $T$ is defined by $T^{\leftarrow}(y) := \text{inf}\{x \in \mathbb R:T(x)\geq y\}$. Here, we make use of the convention that the infimum of an empty set is $\infty$.
+
+### The quantile function
+
+Given some distribution function $F$, the generalized inverse $F^{\leftarrow}$ is the quantile function of F. For $\alpha \in (0,1)$ the $\alpha$-quantile of $F$ is given by
+
+```{=tex}
+\begin{equation}
+q_{\alpha}(F):=F^{\leftarrow}(\alpha) = \text{inf}\{x \in \mathbb R: F(x) \geq \alpha \}.
+(\#eq:quantilefunction)
+\end{equation}
+```
+
+For a random variable $X$ with distribution function $F$, an alternative notation is $q_{\alpha}(X):= q_{\alpha}(F)$. If $F$ is continuous and strictly increasing, we have $q_{\alpha}(F)=F^{-1}(\alpha)$, where $F^{-1}$ is the ordinary inverse of $F$. A point $x_0 \in \mathbb R$ is the $\alpha$-quantile of some distribution function $F$ if and only if the following two conditions are satisfied: $F(x_0) \geq \alpha$ and $F(x) < \alpha$ for all $x < x_0$. 
+
+
+
+\newpage
+
+## Figures
+
+### Mean excess plots {#sec:meplots}
+
+The mean excess plot is defined as $\{(X_{i, n}, e_n (X_{i, n})): 2 \leq i \leq n \}$, where $X_{i, n}$ denotes the upper (or descending) $i$th order statistic. The mean excess plots for the percentage loss data for each asset class are presented below. 
+
+```{r, include = FALSE}
+library(evir)
+library(tidyverse)
+library(qrmtools)
+library(patchwork)
+
+theme_set(theme_minimal())
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+## MEAN EXCESS PLOT OMXS30 ##############################
+
+omxs30_me <- meplot(omxs30_log_return$perc_loss[omxs30_log_return$perc_loss > 0])
+
+omxs30_me_df <- as.data.frame(do.call(cbind, omxs30_me))
+
+omxs30_me_df_t <- as_tibble(omxs30_me_df)
+
+omxs30_meplot <- ggplot(omxs30_me_df_t, aes(x, y)) +
+  geom_point(size = 1.5, color = cbp1[7]) +
+  ylab("Mean excess") +
+  xlab("Threshold") +
+  geom_vline(xintercept = omxs30_threshold, colour = cbp1[1], linetype ="dashed")
+
+## MEAN EXCESS PLOT BITCOIN ##############################
+
+bitcoin_me <- meplot(bitcoin_log_return$perc_loss[bitcoin_log_return$perc_loss > 0])
+
+bitcoin_me_df <- as.data.frame(do.call(cbind, bitcoin_me))
+
+bitcoin_me_df_t <- as_tibble(bitcoin_me_df)
+
+bitcoin_meplot <- ggplot(bitcoin_me_df_t, aes(x, y)) +
+  geom_point(size = 1.5, color = cbp1[7]) +
+  ylab("Mean excess") +
+  xlab("Threshold") +
+  geom_vline(xintercept = bitcoin_threshold, colour = cbp1[1], linetype ="dashed")
+
+## MEAN EXCESS PLOT BRENT ##############################
+
+brent_me <- meplot(brent_crude_log_return$perc_loss[brent_crude_log_return$perc_loss > 0])
+
+brent_me_df <- as.data.frame(do.call(cbind, brent_me))
+
+brent_me_df_t <- as_tibble(brent_me_df)
+
+brent_meplot <- ggplot(brent_me_df_t, aes(x, y)) +
+  geom_point(size = 1.5, color = cbp1[7]) +
+  ylab("Mean excess") +
+  xlab("Threshold") +
+  geom_vline(xintercept = brent_threshold, colour = cbp1[1], linetype ="dashed")
+
+## MEAN EXCESS PLOT SEK/EUR ##############################
+
+sek_eur_me <- meplot(sek_eur_log_return$perc_loss[sek_eur_log_return$perc_loss > 0])
+
+sek_eur_me_df <- as.data.frame(do.call(cbind, sek_eur_me))
+
+sek_eur_me_df_t <- as_tibble(sek_eur_me_df)
+
+sek_eur_meplot <- ggplot(sek_eur_me_df_t, aes(x, y)) +
+  geom_point(size = 1.5, color = cbp1[7]) +
+  ylab("Mean excess") +
+  xlab("Threshold") +
+  geom_vline(xintercept = sek_eur_threshold, colour = cbp1[1], linetype ="dashed")
+
+## MEAN EXCESS PLOT TREASURY ##############################
+
+treasury_me <- meplot(treasury_log_return$perc_loss[treasury_log_return$perc_loss > 0])
+
+treasury_me_df <- as.data.frame(do.call(cbind, treasury_me))
+
+treasury_me_df_t <- as_tibble(treasury_me_df)
+
+treasury_meplot <- ggplot(treasury_me_df_t, aes(x, y)) +
+  geom_point(size = 1.5, color = cbp1[7]) +
+  ylab("Mean excess") +
+  xlab("Threshold")+
+  geom_vline(xintercept = treasury_threshold_subsequent, colour = cbp1[1], linetype ="dashed")
+
+
+```
+
+```{r, omxs30meplot, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Mean excess plot of the positive OMXS30 percentage losses.', out.width='80%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+omxs30_meplot
+
+
+```
+
+
+```{r, bitcoinmeplot, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Mean excess plot of the positive Bitcoin percentage losses.', out.width='80%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+bitcoin_meplot
+
+```
+
+
+```{r, brentmeplot, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Mean excess plot of the positive Brent crude percentage losses.', out.width='80%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+brent_meplot
+
+```
+
+
+```{r, sekeurmeplot, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Mean excess plot of the positive SEK/EUR percentage losses.', out.width='80%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+sek_eur_meplot
+
+```
+
+```{r, treasurymeplot, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Mean excess plot of the positive OMRXBOND percentage losses.', out.width='80%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+treasury_meplot
+
+```
+
+
+
+
+### Shape plots {#sec:shapeplots}
+
+```{r, omxs30shapeplot, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Plot showing the effect on the GPD shape parameter $\\xi$ of changing the threshold for the OMXS30 percentage loss data.', out.width='80%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+library(qrmtools)
+library(latex2exp)
+
+GPD_shape_plot(omxs30_log_return$perc_loss)
+abline(v = omxs30_threshold)
+abline(h = 0.25)
+
+```
+
+```{r, bitcoinshapeplot, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Plot showing the effect on the GPD shape parameter $\\xi$ of changing the threshold for the Bitcoin percentage loss data.', out.width='80%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+library(qrmtools)
+library(latex2exp)
+
+GPD_shape_plot(bitcoin_log_return$perc_loss)
+abline(v = bitcoin_threshold)
+abline(h = 0.25)
+
+```
+
+```{r, brentshapeplot, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Plot showing the effect on the GPD shape parameter $\\xi$ of changing the threshold for the Brent crude percentage loss data.', out.width='80%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+library(qrmtools)
+library(latex2exp)
+
+GPD_shape_plot(brent_crude_log_return$perc_loss)
+abline(v = brent_threshold)
+abline(h = 0.25)
+
+```
+
+```{r, sekshapeplot, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Plot showing the effect on the GPD shape parameter $\\xi$ of changing the threshold for the SEK/EUR percentage loss data.', out.width='80%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+library(qrmtools)
+library(latex2exp)
+
+GPD_shape_plot(sek_eur_log_return$perc_loss)
+abline(v = sek_eur_threshold)
+abline(h = 0.25)
+
+```
+
+```{r, treasuryshapeplot, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Plot showing the effect on the GPD shape parameter $\\xi$ of changing the threshold for the OMRXBOND percentage loss data.', out.width='80%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+library(qrmtools)
+library(latex2exp)
+
+GPD_shape_plot(treasury_log_return$perc_loss)
+abline(v = treasury_threshold_subsequent)
+abline(h = 0.25)
+
+```
+
+### Excess distribution plots {#sec:empplots}
+
+```{r, include = FALSE}
+
+## The below are pictures since it is not possible to output the plots through the corresponding functions due to the functions have a menu() option that cannot be accesses non-interactively. The functions below can be used to accessed the relevant plots.
+
+#library(evir)
+
+#plot(gpd(omxs30_log_return$perc_loss, omxs30_threshold))
+
+#plot(gpd(bitcoin_log_return$perc_loss, bitcoin_threshold))
+
+#plot(gpd(brent_crude_log_return$perc_loss, brent_threshold))
+
+#plot(gpd(sek_eur_log_return$perc_loss, sek_eur_threshold))
+
+#plot(gpd(treasury_log_return$perc_loss, treasury_threshold_subsequent))
+```
+
+
+```{r, empomxs30, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Empirical distribution of excesses and fitted GPD for the OMXS30 percentage loss data.', out.width='60%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+knitr::include_graphics("C:/Users/Rikard/OneDrive/Statistik 2020-2021/Statistik C/Examensarbete/Extreme Value Theory/RmarkdownUppsaladown/index/omxs30emp.pdf")
+
+```
+
+```{r, empbitcoin, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Empirical distribution of excesses and fitted GPD for the Bitcoin percentage loss data.', out.width='60%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+knitr::include_graphics("C:/Users/Rikard/OneDrive/Statistik 2020-2021/Statistik C/Examensarbete/Extreme Value Theory/RmarkdownUppsaladown/index/bitcoinemp.pdf")
+
+```
+
+```{r, empbrent, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Empirical distribution of excesses and fitted GPD for the Brent crude percentage loss data.', out.width='60%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+knitr::include_graphics("C:/Users/Rikard/OneDrive/Statistik 2020-2021/Statistik C/Examensarbete/Extreme Value Theory/RmarkdownUppsaladown/index/brentemp.pdf")
+
+```
+
+```{r, empsek, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Empirical distribution of excesses and fitted GPD for the SEK/EUR percentage loss data.', out.width='60%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+knitr::include_graphics("C:/Users/Rikard/OneDrive/Statistik 2020-2021/Statistik C/Examensarbete/Extreme Value Theory/RmarkdownUppsaladown/index/sekemp.pdf")
+
+```
+
+```{r, emptreasury, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Empirical distribution of excesses and fitted GPD for the OMRXBOND percentage loss data.', out.width='60%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+knitr::include_graphics("C:/Users/Rikard/OneDrive/Statistik 2020-2021/Statistik C/Examensarbete/Extreme Value Theory/RmarkdownUppsaladown/index/treasuryemp.pdf")
+
+```
+
+### Estimated tail probabilities {#sec:tailprobabilities}
+
+```{r, omxs30rmplot, cache = TRUE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Estimated tail of the OMXS30 percentage loss data with points plotted at empirical tail probabilities from the empirical distribution function.', out.width='80%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+#library(qrmtools)
+
+#fit_omxs30 <- QRM::fit.GPD(omxs30_log_return$perc_loss, #omxs30_threshold) # need 'QRM' for that
+#QRM::showRM(fit_omxs30, alpha = alpha[1], RM = "ES",  method = #"BFGS")
+
+library(evir)
+
+tp_omxs30 <- tailplot(out_omxs30)
+
+ci_99_omxs30 <- gpd.sfall(tp_omxs30, alpha[1])
+
+ci_995_omxs30 <- gpd.sfall(tp_omxs30, alpha[2])
+
+ci_999_omxs30 <- gpd.sfall(tp_omxs30, alpha[3])
+
+```
+
+```{r, bitcoinrmplot, cache = TRUE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Estimated tail of the Bitcoin percentage loss data with points plotted at empirical tail probabilities from the empirical distribution function.', out.width='80%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+#library(qrmtools)
+
+#fit_bitcoin <- QRM::fit.GPD(bitcoin_log_return$perc_loss, #bitcoin_threshold) # need 'QRM' for that
+#QRM::showRM(fit_bitcoin, alpha = alpha[1], RM = "ES",  method = #"BFGS")
+
+library(evir)
+
+tp_bitcoin <- tailplot(out_bitcoin)
+
+ci_99_bitcoin <- gpd.sfall(tp_bitcoin, alpha[1])
+
+ci_995_bitcoin <- gpd.sfall(tp_bitcoin, alpha[2])
+
+ci_999_bitcoin <- gpd.sfall(tp_bitcoin, alpha[3])
+
+```
+
+```{r, brentrmplot, cache = TRUE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Estimated tail of the Brent crude percentage loss data with points plotted at empirical tail probabilities from the empirical distribution function.', out.width='80%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+#library(qrmtools)
+
+#fit_brent <- QRM::fit.GPD(brent_crude_log_return$perc_loss, #brent_threshold) # need 'QRM' for that
+#QRM::showRM(fit_brent, alpha = alpha[1], RM = "ES",  method = #"BFGS")
+
+library(evir)
+
+tp_brent <- tailplot(out_brent)
+
+ci_99_brent <- gpd.sfall(tp_brent, alpha[1])
+
+ci_995_brent <- gpd.sfall(tp_brent, alpha[2])
+
+ci_999_brent <- gpd.sfall(tp_brent, alpha[3])
+
+```
+
+```{r, sekrmplot, cache = TRUE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Estimated tail of the SEK/EUR percentage loss data with points plotted at empirical tail probabilities from the empirical distribution function.', out.width='80%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+#library(qrmtools)
+
+#fit_sek <- QRM::fit.GPD(sek_eur_log_return$perc_loss, #sek_eur_threshold) # need 'QRM' for that
+#QRM::showRM(fit_sek, alpha = alpha[1], RM = "ES",  method = "BFGS")
+
+library(evir)
+
+tp_sek <- tailplot(out_sek)
+
+ci_99_sek <- gpd.sfall(tp_sek, alpha[1])
+
+ci_995_sek <- gpd.sfall(tp_sek, alpha[2])
+
+ci_999_sek <- gpd.sfall(tp_sek, alpha[3])
+
+```
+
+```{r, treasuryrmplot, cache = TRUE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Estimated tail of the OMRXBOND percentage loss data with points plotted at empirical tail probabilities from the empirical distribution function.', out.width='80%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+#library(qrmtools)
+
+#fit_treasury <- QRM::fit.GPD(treasury_log_return$perc_loss, #treasury_threshold_subsequent) # need 'QRM' for that
+#QRM::showRM(fit_treasury, alpha = alpha[1], RM = "ES",  method = #"BFGS")
+
+library(evir)
+
+tp_treasury <- tailplot(out_treasury)
+
+ci_99_treasury <- gpd.sfall(tp_treasury, alpha[1])
+
+ci_995_treasury <- gpd.sfall(tp_treasury, alpha[2])
+
+ci_999_treasury <- gpd.sfall(tp_treasury, alpha[3])
+
+```
+
+<!--chapter:end:sections/99-appendix.Rmd-->
+
