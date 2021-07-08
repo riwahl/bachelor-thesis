@@ -1,0 +1,598 @@
+<!-- # Methodology -->
+
+# Theoretical foundations {#sec:method}
+
+In this section, the aim is to present the theoretical underpinnings of the subject of the thesis and give the essential theoretical framework for understanding estimation of ES in an EVT context.
+
+The first section introduces financial risk measurement as a practice and the measures used therein. This entails a review of both VaR and ES. Although ES is the focus of the thesis, ES builds on VaR and it is therefore necessary to introduce both measures. The section after that gives an introduction to EVT and how it can be used in modeling extreme values in financial time series and, of course, its use in estimating ES. 
+
+## Financial risk measurement and risk measures
+
+### Introduction
+
+In general terms, a risk measure maps a financial position with loss $L$ with a real number measuring the "riskiness" of $L$. Risk measures are used for a range of different purposes in practice. Among other things, they are used to determine the amount of capital a financial institution needs to maintain to guard against future (expected and unexpected) losses on its portfolio, in order to satisfy regulators (and, one would hope, to protect its customers). Risk measures can also be used to determine appropriate margin requirements for investors engaged in trading.
+
+The approaches to measuring the risk of a financial position can be grouped into three categories: (i) the *notional-amount* approach, (ii) risk measures based on *scenarios* and (iii) risk measures based on *loss distributions*.[^riskmeasures]
+
+The notional-amount approach is the earliest approach to quantifying the risk of a portfolio of risky assets. Under this approach, the risk of a portfolio is defined as the sum of the notional values of the individual securities in the portfolio, which are then weighted by some factor which is supposed to represent an assessment of the riskiness of each constituent part of the portfolio. Scenario-based risk measures considers a range of different future risk-factor changes -- scenarios -- such as an increase in relevant exchange rates with a concurrent drop in major stock indices. Under the scenario-based approach, the risk of a portfolio is measured as the maximum loss of the portfolio under *all* potential future scenarios. This approach is the one generally adopted in so-called stress testing. Finally, risk measures based on loss distributions builds on statistical quantities describing the conditional or unconditional loss distribution of a portfolio over some predetermined time horizon $\Delta t$. This is the approach used in most modern measures, VaR and ES being two examples. For this reason, it will be the focus for this thesis. 
+
+### Risk measures based on loss distributions
+
+Let $V_{t+1}$ represent the value of a portfolio at the end of a certain time period and let $\Delta V_{t+1} = V_{t+1} - V_t$ represent the change in the value of that portfolio. The *loss* is then defined as $L_{t+1} := -\Delta V_{t+1}$. The distribution of $L_{t + 1}$ is what is termed the *loss distribution*, which thus forms the basis for risk measures based on loss distributions. It should be noted that, since $L_{t+1}$ is defined as the *negative* value of $\Delta V_{t+1}$, positive values of $L_{t+1}$ represent losses. Since we are here mainly interested in the large losses, the focus will be on the right-hand tail of the loss distribution.
+
+Risk measures based on loss distributions have a number of advantages. The concept of a loss distribution is sensible on all levels of aggregation, i.e. from a single financial instrument or security to the overall position of an entire financial institution. Furthermore, the loss distribution reflects netting and diversification effects [@mcneil2015quantitative]. As stated in the introduction to this section, VaR and ES are two risk measures that are based on loss distributions, and they are both introduced next. 
+
+#### Value-at-Risk (VaR)
+
+As has been stated previously, VaR is the risk measure most widely used by financial institutions and it has had a prominent role in the Basel regulatory framework. In general, VaR is defined as the opposite of the minimum loss that can occur at a given (high) confidence level for a pre-defined time horizon. The regulatory norms for market risk set the time horizon at 10 days, indicating the period in which a bank is supposed to be able to liquidate the relevant financial position, and the confidence level at 99% [@rocco2013].
+
+Let us consider a portfolio of risky assets and a fixed time horizon $\Delta t$, with the distribution function of the corresponding loss distribution denoted by $F_{L}(l)=P(L \leq l)$. The idea behind VaR is to define a statistic based on $F_L$ that measures the severity of the risk of holding a portfolio over the time period $\Delta t$. In general terms, VaR is then defined as the maximum loss that is not exceeded with a given high probability. A more formal definition is as follows [@mcneil2015quantitative].
+
+```{definition, VaR, name = "Value-at-Risk"}
+
+Given som confidence level $\alpha \in (0,1)$, the VaR of a portfolio with loss $L$ at the confidence level $\alpha$ is given by the smallest number $l$ such that the probability that the loss $L$ exceeds $l$ is no larger than $1-\alpha$. In mathematical terms, VaR is defined as follows.  
+
+\begin{equation}
+\text{VaR}_{\alpha} = \text{VaR}_{\alpha}(L) = \text{inf}\{l \in \mathbb R: P(L > l) \leq 1 - \alpha \} = \text{inf}\{l \in \mathbb R: F_{L}(l) \geq \alpha \}.
+(\#eq:VaR)
+\end{equation}
+
+```
+
+VaR is thus simply a quantile[^quantile] of the loss distribution. In practice, typical values for $\alpha$ are $\alpha = 0.95$ or $\alpha = 0.99$ and the time horizon $\Delta t$ chosen is usually one or ten days.
+
+By virtue of Definition \@ref(def:VaR), VaR does not give any information regarding the *severity* of losses that occur with a probability of less than $1 - \alpha$. This is one of the great drawbacks of VaR as a measure of risk (remember: reality can produce more extreme outcomes than what can be assumed on the basis of past events). This is a shortcoming that ES tries to remedy.
+
+[^quantile]: Quantiles play an important role in risk management in general, and a formal definition is found in Appendix \@ref(sec:quantiles). 
+
+#### Expected Shortfall (ES)
+
+ES as a risk measure was initially introduced by @rappoport1993new under the name of average shortfall. It was further popularized by Artzner [-@artzner1999coherent; -@artzner1997thinking]. There exists a number of variations on the ES risk measure with a variety of names, examples being *tail conditional expectation*, *worst conditional expectation* and *conditional VaR*. Despite all the variations, they all coincide for continuous loss distributions.
+
+ES is closely related to VaR and is defined as the conditional expectation of loss for losses beyond the VaR level. Thus, by definition, ES takes into account losses beyond the VaR level. Therefore, while VaR represents the *minimum* loss expected at a determined confidence level, ES represents the expected *value* of that loss, provided that the loss is equal to or greater than the VaR [@zikovic2012ranking]. ES is more formally defined as follows.
+
+```{definition, ES, name = "Expected shortfall"}
+
+For a loss $L$ with $E(\vert L \vert) < \infty$ and distribution function $F_L$, the ES at confidence level $\alpha \in (0,1)$ is defined as 
+
+\begin{equation}
+\text{ES}_{\alpha} = \frac{1}{1-\alpha} \int_{\alpha}^{1} q_u (F_L) du,
+(\#eq:ES)
+\end{equation}
+
+where $q_u (F_L) = F_{L}^{\leftarrow}(u)$ is the quantile function of $F_L$.
+
+```
+
+By virtue of Definition \@ref(def:ES), at the confidence level $\alpha$, ES takes into account what occurs in the tail, beyond the corresponding $\text{VaR}_{\alpha}$. ES is related to VaR by
+
+```{=tex}
+\begin{equation}
+\text{ES}_{\alpha} = \frac{1}{1-\alpha} \int_{\alpha}^{1} \text{VaR}_u (L) du.
+(\#eq:ESVaR)
+\end{equation}
+```
+
+Figure \@ref(fig:VaRES) gives a graphical representation of relationship between VaR and ES. The figure gives an example of a loss distribution with the 95% VaR and ES, together with the mean loss $E(L)$, marked.
+
+```{r VaRES, message = FALSE, warning = FALSE, cache=TRUE, echo = FALSE, fig.cap='A graphical representation of the relationship between VaR and ES.', out.width='80%', fig.asp=.75, fig.pos="H", fig.align='center'}
+
+library(fGarch)
+library(ggplot2)
+library(sn)
+library(latex2exp)
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+central_tendency_sim <- -2.6
+dispersion_sim <- 3
+skewness_sim <- 1.5
+
+N_sim <- 10000
+
+obs_sim <- seq(from = -10,
+               to = 10,
+               length.out = N_sim)
+
+ggplot(data = data.frame(u = obs_sim),
+       mapping = aes(x = u)) +
+  stat_function(fun = dsnorm,
+                size = 1.5,
+                color = cbp1[7],
+                args = list(mean = central_tendency_sim,
+                            sd = dispersion_sim,
+                            xi = skewness_sim)) +
+  geom_vline(aes(xintercept = -2.6), linetype = "dotted", size = 1, colour = cbp1[2]) +
+  geom_vline(aes(xintercept = 2.6), size = 1, colour = cbp1[2]) +
+  geom_vline(aes(xintercept = 5),linetype = "dashed", size = 1, colour = cbp1[2]) +
+  theme_minimal() +
+  annotate("text", x = (central_tendency_sim + 0.7), y = 0.15, label = "E(L)") +
+  annotate("text", x = (3.2), y = 0.15, label = "VaR") +
+  annotate("text", x = (5.5), y = 0.15, label = "ES") +
+  ylab("Probability density") +
+  xlab("Loss")
+
+
+```
+
+Instead of fixing a particular confidence level $\alpha$, VaR is averaged over all levels $u \geq \alpha$ and ES therefore looks further into the tail of the loss distribution (which is illustrated in Figure \@ref(fig:VaRES)). We have that $\text{ES}_{\alpha}$ depends only on the distribution of $L$ and $\text{ES}_{\alpha} \geq \text{VaR}_{\alpha}$.
+
+For continuous loss distributions, ES can be interpreted as the expected loss that is incurred *in the event that VaR is exceeded*. For an integrable loss $L$ with continuous distribution function $F_L$ and for any $\alpha \in (0, 1)$, we have
+
+```{=tex}
+\begin{equation}
+\text{ES}_{\alpha} = \frac{E(L; L \geq q_{\alpha}(L))}{1-\alpha} = E(L \vert L \geq \text{VaR}_{\alpha}).
+(\#eq:ES2)
+\end{equation}
+```
+Because $\text{ES}_{\alpha}$ can be thought of as an average over all losses that are greater than or equal to $\text{VaR}_{\alpha}$, it is sensitive to the severity of losses exceeding $\text{VaR}_{\alpha}$, which in this context is considered an advantage.
+
+\newpage
+
+## The theory of extreme values {#sec:evt}
+
+### Introduction
+
+Extreme value theory (EVT) is a branch of probability that is concerned with limiting laws for extreme values in large samples. EVT contains many important results describing the behaviour of sample maxima and minima, upper-order statistics and sample values exceeding high thresholds. EVT has many applications, but the focus in this thesis will be on its application to financial risk factors, and in particular in modeling the extremal behaviour of such risk factors. More specifically, the interest is on models for the *tail* of the distribution of financial risk-factor changes.
+
+Following @mcneil1999extreme, there are two main methods for estimating extreme values. The first method consists of so-called *block maxima* (BM) models, which are centered around the generalized extreme value (GEV) distribution and based on the Fisher-Tippett-Gnedenko theorem (@fisher1928limiting and @gnedenko1943distribution). BM models represent models that are designed for the largest observations from samples of independently and identically distributed observations. The second method consists of *peaks-over-threshold* (POT) models, which are centered around the generalized Pareto distribution (GPD) and based on the Pickands-Balkema-de Haan theorem (@10.2307/2959306 and @pickands1975statistical). POT models concern all observations which exceed a certain (high) threshold. Within the class of POT models, there is a choice between a fully parametric approach based on the GPD and a semi-parametric approach centered around the so-called Hill estimator. POT models are generally considered more efficient in modeling limited data sets, as they are not as reliant on large data sets as BM models and thus not as wasteful of data, see @gilli2006 and @mcneil2015quantitative. Since extreme data, by its very nature, is generally scarce, BM models have been largely superseded in practice by methods based on POT models, which instead uses all the data that exceed a particular designated high threshold. For this reason, the POT method will be used in this thesis. More specifically, the fully parametric POT approach based on the GPD will be used in the estimation of ES. 
+
+A short introduction to the general theory behind both BM and POT models are given in the following sections, which are mainly adapted from @embrechts1997modelling and @mcneil2015quantitative.
+
+### Block maxima-based models
+
+Consider a sequence of independently and identically distributed random variables $(X_i)_{i \in \mathbb N}$, here representing financial losses such as operational losses, insurance losses and losses on a credit portfolio over fixed time intervals.
+
+In EVT, the *generalized extreme value (GEV) distribution* has a role analogous to that of the normal distribution in the central limit theory for sums of random variables.
+
+In classical EVT, we are concerned with limiting distributions for normalized maxima. Denote the maximum of $n$ independently and identically distributed random variables $X_1, X_2, \dots,X_n$ by $M_n = \text{max}\{X_1,X_2,\dots, X_n\}$ (also referred to as an $n$-block maximum). Then, the only possible non-degenerate[^1] limiting distributions for normalized maxima as $n \rightarrow \infty$ are in the GEV family, defined as follows. 
+
+[^1]: By a non-degenerate distribution function is meant a distribution that is not concentrated on a single point.
+
+```{definition, gev, name = "The generalized extreme value distribution"}
+
+The distribution function of the standard GEV distribution is given by
+
+\begin{equation}
+H_{\xi}(x) = 
+\begin{cases}
+\text{exp}(-(1 +\xi x)^{-1/\xi}) , &  \xi \ \neq\ 0, \\
+\text{exp}(-e^{-x}), & \xi \ =\ 0, \\ 
+\end{cases}
+(\#eq:gev)
+\end{equation}
+
+```
+
+where $1 + \xi x > 0$. A three-parameter family is obtained by defining $H_{\xi, \mu, \sigma}(x):= H_{\xi}((x-\mu)/\sigma)$ for a location parameter $\mu \in \mathbb R$ and a scale parameter $\sigma > 0$.
+
+The parameter $\xi$ is called the *shape* parameter of the GEV distribution, and $H_\xi$ defines a *type* of distribution, i.e. a family of distributions specified up to location and scaling. The extreme value distribution in Definition \@ref(def:gev) is generalized in the sense that the parametric form subsumes three types of distributions that are known by other names according to the value of $\xi$, namely:
+
+The Fréchet distribution when $\xi > 0$, with CDF
+
+```{=tex}
+\begin{equation}
+H_{\xi}(x) = 
+\begin{cases}
+\text{exp} [ -(1 + \xi(\frac{x-\mu}{\sigma})^{-1/\xi}], & \text{if}\ x \ >\ -1/\xi, \\
+0, & \text{otherwise}. 
+\end{cases}
+(\#eq:Frechet)
+\end{equation}
+```
+
+The Gumbel distribution when $\xi = 0$, with CDF
+
+```{=tex}
+\begin{equation}
+H_{\xi}(x) = \text{exp}[-\text{exp}(-(\frac{x-\mu}{\sigma}))], \quad -\infty < x < \infty.
+(\#eq:Gumbel)
+\end{equation}
+```
+
+The Weibull distribution when $\xi < 0$, with CDF
+
+```{=tex}
+\begin{equation}
+H_{\xi}(x) = 
+\begin{cases}
+\text{exp}[-(1+\xi(\frac{x-\mu}{\sigma}))^{-1/\xi}] , & \text{if}\ x \ <\ -1/\xi, \\
+0, & \text{otherwise}. 
+\end{cases}
+(\#eq:Weibull)
+\end{equation}
+```
+
+The distribution function and density of the GEV distribution for the three cases presented above are shown in Figure \@ref(fig:gevDist).
+
+```{r gevDist, cache=TRUE, echo = FALSE, fig.cap='The df (left) and density (right) of a standard GEV distribution in three cases, corresponding to the Gumbel, Fréchet and Weibull distributions, respectively.', out.width='100%', fig.pos="H", fig.asp=.75, fig.align='center'}
+
+library(ggplot2)
+library(latex2exp)
+library(evd)
+library(patchwork)
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+gev_density <- ggplot(data.frame(x = c(-2, 7)), aes(x = x)) +
+  stat_function(aes(color = "1"), fun = function(x){dgev(x, loc = 0, scale = 1, shape = 0, log = FALSE)}, size = 1.5) +
+  stat_function(aes(color = "2"), fun = function(x){dgev(x, loc = 0, scale = 1, shape = 0.5, log = FALSE)}, size = 1.5) +
+  stat_function(aes(color = "3"), fun = function(x){dgev(x, loc = 0, scale = 1, shape = -0.5, log = FALSE)}, size = 1.5) +
+  theme_minimal() +
+  xlab("x") + 
+  ylab("density") +
+  theme(legend.position = c(-0.2, -0.1),
+        legend.direction = "horizontal") +
+  scale_colour_manual(values=cbp1, labels = 
+                        unname(TeX(c("$\\xi = 0$ (Gumbel)",
+                                     "$\\xi = 0.5$ (Fréchet)",
+                                     "$\\xi = -0.5$ (Weibull)"))))
+
+
+gev_distribution <- ggplot(data.frame(x = c(-2, 7)), aes(x = x)) +
+  stat_function(aes(color = "1"), fun = function(x){pgev(x, loc = 0, scale = 1, shape = 0)}, size = 1.5) +
+  stat_function(aes(color = "2"), fun = function(x){pgev(x, loc = 0, scale = 1, shape = 0.5)}, size = 1.5) +
+  stat_function(aes(color = "3"), fun = function(x){pgev(x, loc = 0, scale = 1, shape = -0.5)}, size = 1.5) +
+  theme_minimal() +
+  xlab("x") + 
+  ylab("density") +
+  scale_colour_manual(values=cbp1, guide = FALSE, labels = 
+                        unname(TeX(c("$\\xi = 0$ (Gumbel)",
+                                     "$\\xi = 0.5$ (Fréchet)",
+                                     "$\\xi = -0.5$ (Weibull)"))))
+
+gev_distribution + gev_density
+```
+
+Now, supposing that the maxima $M_n$ of independently and identically distributed random variables converge in distribution as $n \rightarrow \infty$ under an appropriate normalization. Having that $P(M_n \leq x) = F^{n}(x)$, this convergence means that there exists sequences of real constants $d_n$ and $c_n$ where $c_n > 0$ for all $n$ such that
+
+```{=tex}
+\begin{equation}
+\lim_{n \to \infty} P((M_n - d_n)/c_n \leq x) = \lim_{n \to \infty} F^{n}(c_{n}x + d_n) = H(x),
+(\#eq:limitingdist)
+\end{equation}
+```
+for some non-degenerate distribution function $H(x)$. The role of the GEV distribution in the study of maxima is formalized by the following definition and theorem.
+
+```{definition, name = "Maximum domain of attraction"}
+
+If Equation \@ref(eq:limitingdist) holds for some non-degenerate distribution function $H$, then $F$ is said to be in the maximum domain of attraction (MDA) of $H$, written $F \in \text{MDA}(H)$.
+
+```
+
+```{theorem, gnedenko, name = "The Fisher-Tippett-Gnedenko theorem"}
+
+If $F \in \text{MDA}(H)$ for some non-degenerate distribution function $H$, then $H$ must be a distribution of type $H_{\xi}$, i.e. a GEV distribution. 
+
+```
+
+### Peaks-over-threshold-based models
+
+As was mentioned in the introduction to this section, the BM method has the major defect of being very wasteful of valuable data since it only retains the maximum losses in large blocks. In contrast, methods based on so-called threshold exceedances or *peaks-over-thresholds* uses all data that exceed a particular threshold. The main distribution model for such exceedances over thresholds is the generalized Pareto distribution (GPD), which is introduced next.
+
+For a random quantity $X$ with distribution function $F(x)$, @pickands1975statistical has shown that under certain conditions, $F(x \vert u) = P(X \leq u +x\vert X>u)$ can be approximated by a GPD, which is defined as follows.
+
+```{definition, gpd, name = "GPD"}
+
+The distribution function of the GPD is given by
+
+\begin{equation}
+G_{\xi, \beta}(x) = 
+\begin{cases}
+1 - (1 + \xi x / \beta)^{-1/\xi}, & \text{if}\ \xi \ \neq\ 0 \\
+1 - \exp(-x\beta), & \text{if}\ \xi \ =\ 0. 
+\end{cases}
+(\#eq:GPD)
+\end{equation}
+  
+```
+
+Like the GEV distribution defined in Definition \@ref(def:gev), the GPD is generalized in the sense that it contains a number of special cases: when $\xi > 0$ the distribution function $G_{\xi, \beta}$ is that of an ordinary Pareto distribution with $\alpha = 1/\xi$. When $\xi = 0$, we have an exponential distribution and when $\xi < 0$ we have a short-tailed Pareto type II distribution. Figure \@ref(fig:gpdDist) shows the GPD distribution function and density for these three different cases.
+
+```{r gpdDist, cache=TRUE, echo = FALSE, fig.cap='The df (left) and density (right) of a standard GPD distribution in three cases, corresponding to the exponential, Pareto and Pareto type II distributions, respectively.', out.width='100%', fig.pos="H", fig.asp=.75, fig.align='center'}
+
+library(ggplot2)
+library(latex2exp)
+library(evd)
+library(patchwork)
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+gpd_density <- ggplot(data.frame(x = c(0, 8)), aes(x = x)) +
+  stat_function(aes(color = "1"), fun = function(x){dgpd(x, loc = 0, scale = 1, shape = 0, log = FALSE)}, size = 1.5) +
+  stat_function(aes(color = "2"), fun = function(x){dgpd(x, loc = 0, scale = 1, shape = 0.5, log = FALSE)}, size = 1.5) +
+  stat_function(aes(color = "3"), fun = function(x){dgpd(x, loc = 0, scale = 1, shape = -0.5, log = FALSE)}, size = 1.5) +
+  theme_minimal() +
+  xlab("x") + 
+  ylab("density") +
+  theme(legend.position = c(-0.2, -0.1),
+        legend.direction = "horizontal") +
+  scale_colour_manual(values=cbp1, labels = 
+                        unname(TeX(c("$\\xi = 0$ (exponential)",
+                                     "$\\xi = 0.5$ (Pareto)",
+                                     "$\\xi = -0.5$ (Pareto type II)"))))
+
+
+gpd_distribution <- ggplot(data.frame(x = c(0, 8)), aes(x = x)) +
+  stat_function(aes(color = "1"), fun = function(x){pgpd(x, loc = 0, scale = 1, shape = 0)}, size = 1.5) +
+  stat_function(aes(color = "2"), fun = function(x){pgpd(x, loc = 0, scale = 1, shape = 0.5)}, size = 1.5) +
+  stat_function(aes(color = "3"), fun = function(x){pgpd(x, loc = 0, scale = 1, shape = -0.5)}, size = 1.5) +
+  theme_minimal() +
+  xlab("x") + 
+  ylab("density") +
+  scale_colour_manual(values=cbp1, guide = FALSE, labels = 
+                        unname(TeX(c("$\\xi = 0$ (exponential)",
+                                     "$\\xi = 0.5$ (Pareto)",
+                                     "$\\xi = -0.5$ (Pareto type II)"))))
+
+gpd_distribution + gpd_density
+
+```
+
+The role of the GPD in EVT is as a natural model for the so-called *excess distribution* over a high threshold, which is defined as follows.
+
+```{definition, excessdist, name = "Excess distribution over threshold $u$"}
+
+Let $X$ be a random variable with distribution function $F$. The excess distribution over the threshold $u$ has distribution function
+
+\begin{equation}
+F_{u}(x) = P(X - u \leq x \vert X > u) = \frac{F(x + u) - F(u)}{1 - F(u)},
+(\#eq:excessdist)
+\end{equation}
+  
+for $0 \leq x < x_F - u$, where $x_F \leq \infty$ is the right endpoint of $F$.
+
+```
+
+A related concept that also plays an important role in EVT is that of the *mean excess function*, which has the following definition.
+
+```{definition, meanexcess, name = "Mean excess function"}
+
+The mean excess function of a random variable $X$ with finite mean is given by
+
+\begin{equation}
+e(u) = E(X - u \vert X > u).
+(\#eq:meanexcess)
+\end{equation}
+  
+
+```
+
+The excess distribution function $F_u$ describes the distribution of the excess loss over the threshold $u$, given that $u$ is exceeded. The mean excess function $e(u)$ expresses the mean of $F_u$ as a function of $u$. In general, if X has distribution function $F = G_{\xi, \beta}$, then, following Equation \@ref(eq:excessdist), the excess distribution function is
+
+```{=tex}
+\begin{equation}
+F_{u}(x) = G_{\xi, \beta (u)}(x), \quad \beta (u) = \beta + \xi u,
+(\#eq:excessdistGPD)
+\end{equation}
+```
+where $0 \leq x < \infty$ if $\xi \geq 0$ and $0 \leq x \leq -(\beta / \xi) - u$ if $\xi < 0$. Using Equation \@ref(eq:excessdistGPD) and the mean of the GPD, which is $E(X) = \beta / (1-\xi)$, the mean excess function of the GPD can be found to equal
+
+```{=tex}
+\begin{equation}
+e(u) = \frac{\beta (u)}{1 - \xi} = \frac{\beta + \xi u}{1 - \xi},
+(\#eq:meanexcessGPD)
+\end{equation}
+```
+where $0 \leq u < \infty$ if $0 \leq \xi < 1$ and $0 \leq u \leq -\beta / \xi$ if $\xi < 0$. The mean excess function is linear in the threshold $u$, which is one of the characterizing properties of the GPD.
+
+The following theorem shows that the GPD is a natural limiting excess distribution for many underlying loss distributions.
+
+```{theorem, pickands, name = "The Pickands-Balkema-de Haan theorem"}
+
+We can find a (positive-measurable function) $\beta (u)$ such that 
+
+\begin{equation}
+\lim_{u \to x_F} \sup_{0 \leq x < x_{F-u}} \vert F_{u}(x) - G_{\xi, \beta (u)} (x) \vert = 0,
+(\#eq:pickands)
+\end{equation}
+
+if and only if $F \in \text{MDA} (H_{\xi}), \xi \in \mathbb R$
+
+```
+
+Theorem \@ref(thm:pickands) is a very widely applicable result that essentially shows that the GPD is the *canonical distribution* for modeling excess losses over high thresholds. It underlies modeling based on the GPD.
+
+Figure \@ref(fig:bmpotplot) gives a graphical representation of the conceptual difference between the BM model (left panel) and the POT model (right panel). As seen, the BM model considers the maximum value for a specific time period, e.g. monthly or yearly, where the variables $X_2, X_5, X_7$ and $X_{11}$ correspond to the block maxima for each such period. The POT model instead considers all observations above a specified threshold (represented by the gray horizontal line), in which case the variables $X_1, X_2, X_5, X_7, X_8, X_9$ and $X_{11}$ are considered as the extreme events. 
+
+```{r, bmpotplot, cache = FALSE, echo = FALSE, fig.cap='A graphical representation of the difference between the BM model (left) and the POT model (right).', out.width='80%', fig.pos="H", fig.asp=.75, fig.align='center'}
+library(ggplot2)
+library(patchwork)
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+lollipop <- data.frame("X" = 1:13, 
+                       "Y" = c(5, 7, 3, 2, 4, 1, 8, 5, 7, 3, 5, 2, 3),
+                       "Name" = c("X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "X11", "X12", "X13"))
+
+pot_example <- ggplot(lollipop) +
+  geom_point(aes(X, Y, color = ifelse(Y > 3.2, cbp1[7], cbp1[1])), size = 3) +
+  geom_segment(aes(x = X,
+                   xend = X,
+                   y = 0,
+                   yend = Y, color = ifelse(Y>3.2, cbp1[7], cbp1[1])), size = 0.5) +
+  scale_color_identity() +
+  theme_minimal() +
+  geom_hline(yintercept = 3.2, linetype = "dashed", colour = cbp1[2], size = 1) +
+  geom_text(aes(X, Y, label=ifelse(Y>3.2,as.character(Name),'')),hjust=-0.5,vjust=-0) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+
+
+bm_example <- ggplot(lollipop) +
+  geom_point(aes(X, Y, color = ifelse(X == 2 | X == 5 | X == 7 | X == 11, cbp1[7], cbp1[1])), size = 3) +
+  geom_segment(aes(x = X,
+                   xend = X,
+                   y = 0,
+                   yend = Y, color = ifelse(X == 2 | X == 5 | X == 7 | X == 11, cbp1[7], cbp1[1])), size = 0.5) +
+  scale_color_identity() +
+  theme_minimal() +
+  geom_text(aes(X, Y, label=ifelse(X == 2 | X == 5 | X == 7 | X == 11,as.character(Name),'')),hjust=-0.5,vjust=-0) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+
+(bm_example + pot_example)
+
+```
+
+
+### Modeling risk measures with EVT  {#sec:modelingrisk}
+
+#### Modeling excess losses
+
+As has been stated in the above, the focus of this thesis will be on POT models. POT models use the GPD as the main distribution model for exceedances over thresholds. 
+
+We first circle back to Theorem \@ref(thm:pickands). Assuming that we have a loss distribution $F \in \text{MDA}(H_\xi)$ such that, for some high threshold $u$, we can model $F_u$ by a GPD. This builds on the assumption that $F$ is a loss distribution with right endpoint $x_F$ and that we for some high threshold $u$ have $F_{u}(x)=G_{\xi, \beta}(x)$ for $0 \leq x < x_F-u$ and some $\xi \in \mathbb R$ and $\beta > 0$.
+
+The method for modeling exceedances is then as follows. Given loss data $X_1, X_2, \dots, X_n$ from $F$, a random number of observations will exceed the threshold $u$. Labeling the total number of observations exceeding the threshold $u$, i.e. the total number of exceedances, as $N_u$ and the corresponding observations as $\tilde X_1, \tilde X_2, \dots, \tilde X_n$, we calculate $Y_j = \tilde X_j - u$ of the excess loss for each of these exceedances. The aim is to estimate the parameters of a GPD model by fitting the distribution to the $N_u$ excess losses. This can be done in several ways, with the most common method being by way of maximum likelihood estimation, a method which has been extensively studied in an EVT framework (examples include @davison1984, @smith1984 and @grimshaw1993computing). Alternative methods include the probability-weighted moment (PWM) method [@hosking1987parameter] and the elemental percentile method [@castillo1997fitting]. In this thesis, the focus will be on maximum likelihood estimation. The method of finding the maximum likelihood estimates of the GPD is shown in Appendix \@ref(sec:mle).
+
+#### Choice of threshold 
+
+Utilising the POT method to model extreme values requires that a suitable threshold $u$ is chosen. This threshold basically serves as a cut-off above which the GPD is (hopefully) a suitable model. The choice of the threshold $u$ is for this reason an important, but unfortunately not a trivial, task. The higher the threshold is set, the fewer observations there are for estimating the parameters of the GPD, making the estimates less reliable. A lower threshold implies that more observations are available for parameter estimation, but comes with the trade-off that observations above the (lower) threshold might not conform to the GPD [@christoffersen2011elements]. There exists no readily applicable algorithm (yet) for selecting a suitable threshold [@gilli2006]. One common method for trying to make an informed decision regarding the choice of threshold builds on the *mean excess function*, which is given by
+
+```{=tex}
+\begin{equation}
+e(v) = \frac{\beta + \xi (v-u)}{1-\xi} = \frac{\xi v}{1 - \xi} + \frac{\beta - \xi u}{1 - \xi},
+(\#eq:meanexcessfunction)
+\end{equation}
+```
+
+where $u \leq v < \infty$ if $0 \leq \xi < 1$ and $u \leq v \leq u - \beta/\xi$ if $\xi < 0$. The mean excess function in Equation \@ref(eq:meanexcessfunction) is linear in $v$, and this is commonly exploited as the basis for a graphical method for choosing an appropriate threshold based on the so-called *sample mean excess plot*. 
+
+For positive-valued loss data $X_1, X_2, \dots, X_n$, the sample mean excess function is defined to be an empirical estimator of the mean excess function in Definition \@ref(def:meanexcess), the estimator of which is given by
+
+```{=tex}
+\begin{equation}
+e_{n}(v) = \frac{\sum_{i=1}^{n}(X_i - v)I_{\{X_i > v\}}}{\sum_{i =1}^{n}I_{\{X_i > v\}}}.
+(\#eq:meanexcessest)
+\end{equation}
+```
+
+A mean excess plot is then constructed. If the data support a GPD model over a high threshold, then Equation \@ref(eq:meanexcessfunction) suggests that this plot should become increasingly "linear" for higher values of $v$. In this context, a linear upward trend indicates a GPD model with positive shape parameter $\xi$ and a plot tending towards being horizontal indicates a GPD with approximately a zero shape parameter, i.e. an exponential excess distribution. Finally, a linear downward trend indicates a GPD with a negative shape parameter. 
+
+An example[^meplotexample] of a sample mean excess plot is shown in Figure \@ref(fig:meplotex). 
+
+```{r, include = FALSE}
+library(evir)
+library(tidyverse)
+
+data(danish)
+
+meplot_danish <- meplot(danish)
+
+df <- as.data.frame(do.call(cbind, meplot_danish))
+
+df_t <- as_tibble(df)
+```
+
+
+```{r meplotex, cache=FALSE, echo = FALSE, fig.cap='Example of a sample mean excess plot based on the Danish fire insurance dataset.', out.width='80%', fig.pos="H", fig.asp=.75, fig.align='center'}
+
+library(ggplot2)
+library(latex2exp)
+library(patchwork)
+library(evir)
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+meplot_example <- ggplot(df, aes(x, y)) +
+  geom_point(size = 1.5, color = cbp1[7]) +
+  ylab("Mean excess") +
+  xlab("Threshold") +
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(0, 60, by = 10)) +
+  scale_y_continuous(breaks = seq(0, 120, by = 20))
+
+meplot_example
+
+```
+
+Here, we see that the plot is fairly linear over the entire range, and the upwards slope suggests that a GPD with a positive shape parameter $\xi$ could be fitted for the data. There is a small kink forming after a threshold of 10, which suggests that $u = 10$ might be a sensible starting point as a choice of threshold. 
+
+The method of using the sample mean excess plot for determining a suitable threshold suffers from the major drawback of being subjective (and sometimes highly so); it is not always apparent when and where the linearity "ceases" and there can also be several distinct linear parts. As an alternative, the threshold can simply be set such that some proportion of the distribution is above the threshold. @nystrom2002framework suggests that the threshold be set such that 10% of the distribution is above the threshold; other choices that could be equally suitable are 5% and 15%. 
+
+#### Estimation of the tail and risk measures
+
+Using the GPD model described previously to model excess losses, we can proceed to estimate the tail of the underlying loss distribution $F$ and the associated risk measure, in this case ES.
+
+The formula for *tail probabilities*, for $x \geq u$, is given by
+
+```{=tex}
+\begin{equation}
+\begin{aligned}
+\bar F (x) &= P(X >u)P(X > x \vert X >u)\ \\
+& = \bar F (u)P(X-u > x- u \vert X > u)\ \\
+& = \bar F (u) \bar F_u (x-u)\ \\
+& = \bar F (u) \left(1 + \xi \frac{x-u}{\beta} \right)^{-1\xi}.
+\end{aligned}
+(\#eq:tailprob)
+\end{equation}
+```
+
+By inverting Equation \@ref(eq:tailprob), we can obtain a high quantile of the underlying distribution, which in turn can be interpreted as VaR. Then, for $\alpha \geq F(u)$, VaR equals
+
+```{=tex}
+\begin{equation}
+\text{VaR}_{\alpha} = q_{\alpha}(F) = u + \frac{\beta}{\xi} \left( \left (  \frac{1-\alpha}{\bar F(u)}  \right)^{-\xi} -1 \right).
+(\#eq:VaRest)
+\end{equation}
+```
+
+For $\xi < 1$, the ES is calculated as
+
+```{=tex}
+\begin{equation}
+\text{ES}_{\alpha} = \frac{1}{1-\alpha} \int_{\alpha}^{1} q_{x}(F)\text{dx} = \frac{\text{VaR}_{\alpha}}{1 - \xi} + \frac{\beta - \xi u}{1 - \xi}.
+(\#eq:ESest)
+\end{equation}
+```
+
+If a GPD has been fitted to excess losses over a threshold $u$ in the manner described above, the quantities can be estimated by replacing $\xi$ and $\beta$ in Equations \@ref(eq:tailprob)--\@ref(eq:ESest) by their corresponding estimates. This also requires an estimate of $\bar F(u)$, for which the simple empirical estimator $N_u/n$ is often used.[^empiricalestimator] An estimator for tail probabilities, which was first proposed by @smith1987estimating, can then be obtained, on the form
+
+```{=tex}
+\begin{equation}
+\hat{\bar{{F}}}(x) = \frac{N_u}{n}\left(1 + \hat \xi \frac{x - u}{\hat \beta} \right)^{-1/ \hat \xi}.
+(\#eq:tailprobest)
+\end{equation}
+```
+
+Equation \@ref(eq:tailprobest) is, however, only valid for $x \geq u$. 
+
+For $\alpha \geq 1 - N_u$, analogous point estimators of $\text{VaR}_{\alpha}$ and $\text{ES}_{\alpha}$ are obtained from Equations \@ref(eq:VaRest) and \@ref(eq:ESest). To do this, we can set a high threshold $u = L_{k+1, n}$ at the $(k+1)$-upper-order statistic and fit a GPD distribution to excess losses over $u$. It is thereby possible to obtain the maximum likelihood estimates $\hat \xi$ and $\hat \beta$ based on $k$ exceedances over the threshold. In order to form a quantile estimator, the value $k$ must satisfy $k/n > 1 - \alpha$, where $k$ should be sufficiently large to give reasonably accurate estimates of the GPD parameters. It follows then that the risk measure estimates for $\text{VaR}_{\alpha}$ and $\text{ES}_{\alpha}$, respectively, are
+
+```{=tex}
+\begin{equation}
+\widehat{\text{VaR}}_{\alpha} = u + \frac{\hat \beta}{\hat \xi}\left(\left( \frac{1-\alpha}{k/n} \right)^{- \hat \xi} -1 \right),
+(\#eq:VaRestimate)
+\end{equation}
+```
+
+```{=tex}
+\begin{equation}
+\widehat{\text{ES}}_{\alpha} = \frac{\widehat{\text{VaR}}_{\alpha}}{1-\hat \xi} + \frac{\hat \beta - \hat \xi u}{1-\hat \xi}.
+(\#eq:ESestimate)
+\end{equation}
+```
+
+
+
+[^meplotexample]: The data comes from the well-studied Danish fire insurance data, which consists of 2,156 fire insurance losses over 1,000,000 Danish kroner from 1980 to 1990, expressed in units of 1,000,000 kroner. Data accessed via the function `data(danish)` in the `{evir}` R package. 
+
+[^empiricalestimator]: By using the empirical estimator $N_u/n$, we are implicitly assuming that there is a sufficient proportion of sample values above the threshold $u$ to reliably estimate $\bar F(u)$. 
+
+[^riskmeasures]: The interested reader can consult @crouhy2000comparative, which gives an extensive overview of different approaches to risk quantification.

@@ -1,0 +1,50 @@
+<!-- # Introduction -->
+
+# Introduction
+
+> A little river seems to him, who has never seen a large river, a mighty stream; and so with other things -- a tree, a man -- anything appears greatest to him that never knew a greater.
+
+> `r tufte::quote_footer('--- Lucretius, *De Rerum Natura*')`
+
+## Extreme events and the Lucretius problem
+
+The introductory quote has been pithily summarized as the *Lucretius problem* or the *Lucretian fallacy* by @taleb2012antifragile. He rephrases it in a bit more colorful fashion: the fool believes that the tallest mountain in the world is the tallest mountain that he has seen. Under this mental fallacy, the "fool" assumes that the worst-case event that can occur is the worst-case event that *has* occurred. An example[^resnickexample] can serve as an illustration. During the period 1970--1995, the two worst cumulative insurance losses were results of Hurricane Andrew and the Northridge earthquake in California. Someone vulnerable to the Lucretian fallacy (perhaps an insurance company) would conclude that these events constituted the worst possible outcome that could happen, since they were then the worst outcome to date that *had* happened. However, Hurricane Katrina would serve as a reminder of the dangers of such an assumption. In short, reality might just produce more extreme outcomes than what is assumed on the basis of past events. In other words: the worst is yet to come!
+
+One industry that seems particularly vulnerable to the Lucretian fallacy is the financial sector. This was made painfully obvious during the financial crisis of 2007--2008. This crisis accelerated the growth of the field of *risk management*. In risk management, the concern is mainly centered around asking the question: "What is the potential future loss that can be expected?". The field commonly uses statistical models based upon the Gaussian (normal) distribution. The main reason for this, it seems, is that the Gaussian distribution has convenient properties[^normalproperties], and not necessarily because it reflects financial reality. Indeed, a Gaussian assumption is *not* realistic in finance, the main reason being that financial returns are often *leptokurtic*, i.e. they frequently exhibit heavy ("fat") tails.[^leptokurtic] This is due to the presence of extreme values, which leads to a peaked density [@righi2015comparison]. The skepticism regarding the adequateness of the normality assumption for financial time series is not new; indeed Mandelbrot [-@mandelbrot1963; -@mandelbrot1967] and Fama [-@fama1963; -@fama1965] were early critics of the (ab)use of the normal distribution in this context. There is now considerable evidence that the normal distribution is too thin-tailed to adequately fit financial data from many markets (see @rocco2013 and @franke2015statistics, among others). For risk management to be prudent, then, a proper distribution function (that is not the normal distribution, in spite of all its conveniences) must be used in order to reflect this reality.
+
+There has not been a shortage of proposed solutions for assessing operational risk in finance and to better deal with the heavy-tailed nature of financial time series, see, among others, @bocker2010multivariate, @chavez2006quantitative, @chavez2016extreme and @puccetti2014asymptotic. What all seem to agree on, however, is that *extreme value theory* should be employed as it better reflects reality in this context. Extreme value theory, in short, focuses on tail properties of a distribution rather than, say, its center (mean). And, in this context, it is the tail of a distribution that matters when we are interested in quantities like Value-at-Risk and expected shortfall [@cirillo2016expected].
+
+The so-called Value-at-Risk (VaR) has come to be *de rigueur* risk measure for financial risk management. The reasons for this include the measure's conceptual simplicity, ease of computation and applicability [@yamai2005value]. However, VaR has been criticized for having several conceptual problems (see @artzner1999coherent and @MolinaMuoz2020, among others). These shortcomings include (i) VaR measuring only percentiles of profit-loss distributions, disregarding losses beyond the specified VaR level, i.e. it does not account for the so-called tail risk and (ii) VaR not being a *coherent* risk measure due to it not being subadditive.
+
+The first shortcoming listed above can be especially serious: VaR can only show what the expected losses can be if a tail event does not occur. If a tail event does occur, however, it can be expected that the losses will exceed what is indicated by the VaR measure, but VaR itself does not give an indication of how much that might be [@du2017backtesting]. Or, as an article in @economist put it: "VaR captures how bad things can get 99% of the time, but the real trouble is caused by the outlying 1%."
+
+As an alternative to VaR, the use of expected shortfall (ES) has been proposed by @artzner1997thinking, with the properties of ES further studied by @acerbi2002coherence, @acerbi2001expected and @rockafellar2002conditional, among others. Furthermore, based on the recommendations published in a consultative document by the @basel2013, VaR is set to be replaced by ES as a measure of market risk for capital requirement purposes. It is therefore of interest to see how ES performs as a risk management tool in a financial setting.
+
+## The subject and aim of the thesis
+
+The purpose of this thesis is to give an introduction to how EVT can be used in financial risk management to (hopefully) produce sensible estimates of risk measures and, more specifically, to give an introduction to how EVT can be used to estimate ES. This will be achieved through an introduction of the theoretical underpinnings of the method as well as a practical application on real-world financial data. The application of the estimation method will be performed on five distinct asset classes, namely: (i) equities, (ii) fixed income, (iii) currency exchange rates, (iv) commodities and (v) cryptocurrencies. This empirical analysis will be performed in order to estimate ES on actual market data for the purpose of evaluating the performance of an EVT-based approached to estimating ES for different assets. Is every asset class equally suited for an EVT approach? Is some asset class more prone to extreme values than others? What other differences come to light between different asset classes? These are questions that I intend to highlight in this thesis. 
+
+The aim is to contribute to the literature an overview of how ES can be used in an EVT framework to produce ES estimates for a range of different asset classes and to shed some light on whether these are sensible and reflective of reality, and thus useful in practical risk management. The study is also conducted on a number of different asset classes, which will hopefully give further insight into the differences in the performance of ES on different types of financial assets. Finally, the thesis raises some potential problems with the method used and offers some suggestions for improvements and future research.  
+
+## Prior research
+
+EVT is not a new field of statistics, although it has gained in popularity in recent decades. @gumbel1958statistics is considered a foundational book for the field. Other works on EVT in general include @haan2006extreme, @embrechts1997modelling and @resnick2007heavy. For EVT applied in a financial context, see @longin2016extreme and @mcneil2015quantitative, among other works.
+
+VaR has been extensively studied in the literature. One influential paper is @mcneil2000estimation. In it, they propose a method for estimating VaR and related risk measures describing the tail of the conditional distribution of a heteroscedastic financial return series, combining a pseudo-maximum-likelihood fitting of GARCH models and EVT for estimating the tail of the innovation distribution of the GARCH model. @gilli2006 use different approaches to EVT in modeling tail-related risk measures, VaR being among them. 
+
+ES estimation has not been as widely studied as VaR, and the former has often featured less prominently in the research corpus. Studies are not completely missing, however. Some examples of previous studies include @alexander2008developing, @jalal2008predicting and @ergun2010time. The focus of the papers just mentioned was to, respectively, propose a stress test, verify specification errors and highlight advantages in time-varying asymmetry in risk estimation. @wong2012capturing gives a comparison of different methods for estimating ES and @righi2015comparison conducts an extensive comparison of different ES estimation models. 
+
+## Outline of the thesis
+
+The remainder of this thesis is organized as follows.
+
+The following section provides the theoretical framework for the subject of the thesis and gives an introduction to extreme value theory and its application in risk management. An introduction is also given to financial risk measures in the form of VaR and ES. Section \@ref(sec:data) describes the methodology used for the estimation of ES and also introduces the data used in this thesis for this purpose. Section \@ref(sec:results) presents the results. Finally, Section \@ref(sec:slutsats) gives some concluding remarks, potential issues with the study and some suggestions for further research on the topic.
+
+
+[^leptokurtic]: The fact that financial return series are leptokurtic or heavy-tailed is one of the so-called *stylized facts* of financial return series, see @mcneil2015quantitative.
+
+[^normalproperties]: These "convenient properties" are that the normal distribution function is completely defined by its mean $\mu$ and variance $\sigma^2$.
+
+[^resnickexample]: Example taken from @resnick2007heavy.
+
+\newpage

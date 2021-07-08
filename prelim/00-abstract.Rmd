@@ -1,0 +1,6 @@
+<!-- # Abstract {-} -->
+# Abstract {-}
+
+Value-at-Risk (VaR) has long been the standard risk measure in financial risk management. However, VaR suffers from critical shortcomings as a risk measure when it comes to quantifying the most severe risks, which was made especially apparent during the financial crisis of 2007--2008. An alternative risk measure addressing the shortcomings of VaR known as expected shortfall (ES) is gaining popularity and is set to replace VaR as the standard measure of financial risk.
+
+This thesis introduces how extreme value theory can be applied in estimating ES using an unconditional peaks-over-threshold method. This includes giving an introduction to the theoretical foundations of the method. An application of this method is also performed on five different assets. These assets are chosen to serve as a proxy for the more broad asset classes of equity, fixed income, currencies, commodities and cryptocurrencies. In terms of ES, we find that cryptocurrencies is the riskiest asset and fixed income the safest.

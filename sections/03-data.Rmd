@@ -1,0 +1,443 @@
+# Data and methodology {#sec:data}
+
+## Methodological aspects
+
+### Financial returns
+
+Our main interest in the context of this thesis are the *returns* of financial assets. More specifically, we are interested in the (large) negative returns, more commonly known as losses. If we let $P_t$ represent the daily closing price of a particular assets at time $t$, the simple gross return $R_t$, i.e. the return from $t-1$ to $t$, is defined as
+
+```{=tex}
+\begin{equation}
+1 + R_t = \frac{P_t}{P_{t-1}}.
+(\#eq:grossreturn)
+\end{equation}
+```
+
+The continuously compounded return (the "log return"), $r_t$, is then defined as the natural logarithm of Equation \@ref(eq:grossreturn), that is
+
+```{=tex}
+\begin{equation}
+r_t = \text{log}(1 + R_t) = \text{log}(\frac{P_t}{P_{t-1}}) = \text{log}(P_t) - \text{log}(P_{t-1}).
+(\#eq:logreturn)
+\end{equation}
+```
+
+The so-called loss return $X_t$ at time $t$ represents the negative log-return $r_t$ and is thus defined simply as
+
+```{=tex}
+\begin{equation}
+X_t = -r_t.
+(\#eq:lossreturn)
+\end{equation}
+```
+
+$X_t$ therefore represents losses as positive values. The percentage *loss* in value from time $t-1$ to $t$ is then calculated as
+
+```{=tex}
+\begin{equation}
+L_t = 100(1-\text{exp}(r_t)) = 100(1-\text{exp}(-X_t)),
+(\#eq:percloss)
+\end{equation}
+```
+
+where positive values of $L_t$ represent percentage losses and negative values represent percentage gains. Since we are interested in the large losses in the context of this thesis, the general focus will be on daily values of $L_t > 0$, which, as said, represents the daily percentage losses. 
+
+### Implementation
+
+The implementation of the theoretical aspects and their application to the empirical data is done via R [@R]. EVT-specific applications have been made available through the R packages `{evir}` [@evir] and `{qrmtools}` [@qrmtools], which have been used for these purposes in this thesis.
+
+## Data exposition
+
+As was stated in the introduction, the estimation ES will be performed on data representing (or trying to represent) the entire spectrum of the financial markets, namely equity, fixed income, currency exchange rates, commodities, and, in the name of modernity, cryptocurrencies. Equity will be represented by the Swedish OMXS30 index[^OMXS30data], which represents the 30 largest companies on the Nasdaq Stockholm exchange. Fixed income is represented by the OMRXBOND index[^OMRXBONDdata], which includes bonds issued by the Swedish state. Currency exchange rates will be represented by the SEK/EUR exchange rate and commodities gets its representation through Brent crude[^SEKEURBRENTdata], which also serves a function as a reference for pricing oil, making it suitable as a broad representation of commodities. Lastly, cryptocurrencies is represented by what most think of when it comes to this asset class -- the "millennials' gold" -- namely, Bitcoin[^BITCOINdata]. 
+
+[^OMXS30data]: The OMXS30 price data comes from www.borsdata.se (paid subscription).
+[^OMRXBONDdata]: The OMRXBOND price data comes from www.nasdaqomxnordic.com.
+[^SEKEURBRENTdata]: The SEK/EUR and Brent crude price data comes from www.borsdata.se (paid subscription). 
+[^BITCOINdata]: The Bitcoin price data comes from www.coindesk.com. 
+
+```{r, echo = FALSE, message = FALSE}
+
+library(tidyverse)
+library(forecast)
+library(scales)
+library(readxl)
+library(janitor)
+library(quantmod)
+library(tidyquant)
+library(lubridate)
+theme_set(theme_minimal())
+
+
+
+# --------------------- BITCOIN ---------------------
+
+# Get the bitcoin data
+
+bitcoin <- read_xlsx("Bitcoin.xlsx", 2) %>% 
+  clean_names() %>%                                         # Clean names
+  mutate(log_return = c(diff(log(closeprice)), NA))
+
+# Separate out log return
+
+bitcoin_log_return <- bitcoin %>% 
+  select(date, log_return) %>% 
+  filter(log_return != "NA",
+         log_return != 0) %>% 
+  mutate(neg_log_return = -log_return,
+         perc_loss = 100*(1-exp(log_return)),
+         neg_perc_loss = -perc_loss)
+
+# See https://rstudio-pubs-static.s3.amazonaws.com/78839_afca73ae18194eaf8f1b86d399dde969.html for a possible solution
+
+# Store as a ts object for time series
+
+
+# --------------------- OMXS30 ---------------------
+
+omxs30 <- read_xlsx("OMXS3020y.xlsx", 3) %>% 
+  clean_names() %>%                                         # Clean names
+  mutate(log_return = c(diff(log(closeprice)), NA))
+
+omxs30_log_return <- omxs30 %>% 
+  select(date, log_return) %>% 
+  filter(log_return != "NA",
+         log_return != 0) %>% 
+  mutate(neg_log_return = -log_return,
+         perc_loss = 100*(1-exp(log_return)),
+         neg_perc_loss = -perc_loss)
+
+# Store as a ts object for time series
+
+
+# --------------------- Brent Crude ---------------------
+
+brent_crude <- read_xlsx("LCOc1-Brent Crude.xlsx", 2) %>% 
+  clean_names() %>%                                         # Clean names
+  mutate(log_return = c(diff(log(closeprice)), NA))
+
+brent_crude_log_return <- brent_crude %>% 
+  select(date, log_return) %>% 
+  filter(log_return != "NA",
+         log_return != 0) %>% 
+  mutate(neg_log_return = -log_return,
+         perc_loss = 100*(1-exp(log_return)),
+         neg_perc_loss = -perc_loss)
+
+
+# --------------------- SEK/EUR ---------------------
+
+sek_eur <- read_xlsx("SEKEUR-SEK_EUR.xlsx", 2) %>% 
+  clean_names() %>%                                         # Clean names
+  mutate(log_return = c(diff(log(closeprice)), NA))
+
+sek_eur_log_return <- sek_eur %>% 
+  select(date, log_return) %>% 
+  filter(log_return != "NA",
+         log_return != 0) %>% 
+  mutate(neg_log_return = -log_return,
+         perc_loss = 100*(1-exp(log_return)),
+         neg_perc_loss = -perc_loss)
+
+
+# --------------------- US 10 year treasury ---------------------
+
+#t10y <- getSymbols(Symbols = "DGS10", src = "FRED", auto.assign = #FALSE)
+
+#t10yd <- data.frame(date = index(t10y), coredata(t10y))
+
+#treasury <- t10yd %>% 
+#  rename("price" = "DGS10") %>% 
+#  filter(date >= "2001-04-23" & date <= "2021-04-23") %>% 
+#  mutate(log_return = c(diff(log(price)), NA))
+
+#treasury_log_return <- treasury %>% 
+#  select(date, log_return) %>% 
+#  filter(log_return != "NA",
+#         log_return != 0) %>% 
+#  mutate(neg_log_return = -log_return,
+#         perc_loss = 100*(1-exp(log_return)),
+#         neg_perc_loss = -perc_loss)
+
+treasury <- read_xlsx("OMRXBOND.xlsx") %>% 
+  rename("price" = "close") %>% 
+  filter(date <= "2021-04-23") %>% 
+  mutate(price = as.numeric(price),
+         log_return = c(diff(log(price)), NA))
+
+treasury_log_return <- treasury %>% 
+  select(date, log_return) %>% 
+  filter(log_return != "NA",
+         log_return != 0) %>% 
+  mutate(neg_log_return = -log_return,
+         perc_loss = 100*(1-exp(log_return)),
+         neg_perc_loss = -perc_loss)
+
+
+
+```
+
+The data consists of daily closing prices for each of the assets. For each observation, the log return was first computed (which excludes the first observation in each series) as per Equation \@ref(eq:logreturn). From this, the daily percentage losses were calculated as per Equation \@ref(eq:percloss). Table \@ref(tab:descriptives) gives an overview of the start date, end date and number of observations for the data pertaining to each asset class.
+
+```{r, descriptives, echo = FALSE, message = FALSE, fig.pos = "H"}
+
+library(dplyr)
+library(moments)
+library(kableExtra)
+
+descriptive_stats <- 
+  data.frame("Asset" = c("OMXS30", "Bitcoin", "Brent crude", "SEK/EUR", "OMRXBOND"),
+                 "Start" = c(as.character(min(omxs30$date)), 
+                             as.character(min(bitcoin$date)), 
+                             as.character(min(brent_crude$date)), 
+                             as.character(min(sek_eur$date)), 
+                             as.character(min(treasury$date))),
+                 "End" = c(as.character(max(omxs30$date)), 
+                           as.character(max(bitcoin$date)), 
+                           as.character(max(brent_crude$date)), 
+                           as.character(max(sek_eur$date)), 
+                           as.character(max(treasury$date))),
+                 "N" = c(nrow(omxs30_log_return), 
+                         nrow(bitcoin_log_return),
+                         nrow(brent_crude_log_return),
+                         nrow(sek_eur_log_return),
+                         nrow(treasury_log_return)))
+
+kbl(descriptive_stats, caption = "Start and end date of each time series and the number of observations.", booktabs = T, align = "c") %>% row_spec(0, bold = TRUE) %>% kable_styling(latex_options = "HOLD_position")
+
+```
+
+Figure \@ref(fig:assets) shows the daily closing price and the (positive and negative) percentage losses for each asset class for the relevant period. 
+
+```{r assets, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Daily closing prices (left) and percentage losses (right) of each asset.', out.width='100%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+library(ggplot2)
+library(latex2exp)
+library(evd)
+library(patchwork)
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+p_bitcoin_log_return <- 
+  ggplot(bitcoin_log_return, aes(x = date, y = perc_loss)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab(" ") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_bitcoin_close <- 
+  ggplot(bitcoin, aes(x = date, y = closeprice)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab("Bitcoin") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_omxs30_log_return <- 
+  ggplot(omxs30_log_return, aes(x = date, y = perc_loss)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab(" ") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_omxs30_close <- 
+  ggplot(omxs30, aes(x = date, y = closeprice)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab("OMXS30") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_brent_crude_log_return <- 
+  ggplot(brent_crude_log_return, aes(x = date, y = perc_loss)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab(" ") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_brent_crude_close <- 
+  ggplot(brent_crude, aes(x = date, y = closeprice)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab("Brent Crude") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_sek_eur_log_return <- 
+  ggplot(sek_eur_log_return, aes(x = date, y = perc_loss)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab(" ") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_sek_eur_close <- 
+  ggplot(sek_eur, aes(x = date, y = closeprice)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab("SEK/EUR") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_treasury_log_return <- 
+  ggplot(treasury_log_return, aes(x = date, y = perc_loss)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab(" ") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE))
+
+p_treasury_close <- 
+  ggplot(treasury, aes(x = date, y = price)) +
+  geom_line(colour = cbp1[7], size = 0.75) +
+  ylab("OMRXBOND") +
+  xlab(" ") +
+  scale_y_continuous(labels=function(x) format(x, big.mark = ",", decimal.mark = ".", scientific = FALSE)) +
+  scale_y_continuous(breaks = c(5000, 5500, 6000))
+
+
+(p_bitcoin_close | p_bitcoin_log_return) /
+(p_omxs30_close | p_omxs30_log_return) /
+(p_brent_crude_close | p_brent_crude_log_return) /
+(p_sek_eur_close | p_sek_eur_log_return) /
+(p_treasury_close | p_treasury_log_return)
+
+```
+
+From Figure \@ref(fig:assets), we can see clear signs of the phenomenon known as *volatility clustering*, i.e. that large changes tend to be followed by large changes and small changes tend to be followed by small changes (though not necessarily in the same direction).[^volatilityclustering]
+
+Table \@ref(tab:table1) gives an overview of the descriptive statistics for the percentage loss data for the assets.  
+
+```{r table1, echo=FALSE, message=FALSE, fig.pos="H"}
+
+library(dplyr)
+library(moments)
+library(kableExtra)
+
+col_names <- c("OMXS30", "Bitcoin", "Brent Crude", "SEK/EUR", "OMRXBOND")
+
+means     <- c(format(round((mean(omxs30_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((mean(bitcoin_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((mean(brent_crude_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((mean(sek_eur_log_return$perc_loss)), 5), nsmall =5, scientific = F),
+               format(round((mean(treasury_log_return$perc_loss)), 5), nsmall =5))
+
+stddev    <- c(format(round((sd(omxs30_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((sd(bitcoin_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((sd(brent_crude_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((sd(sek_eur_log_return$perc_loss)), 5), nsmall =5),
+               format(round((sd(treasury_log_return$perc_loss)), 5), nsmall =5))
+
+skewness  <- c(format(round((skewness(omxs30_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((skewness(bitcoin_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((skewness(brent_crude_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((skewness(sek_eur_log_return$perc_loss)), 5), nsmall =5),
+               format(round((skewness(treasury_log_return$perc_loss)), 5), nsmall =5))
+
+kurtosis  <- c(format(round((kurtosis(omxs30_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((kurtosis(bitcoin_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((kurtosis(brent_crude_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((kurtosis(sek_eur_log_return$perc_loss)), 5), nsmall =5),
+               format(round((kurtosis(treasury_log_return$perc_loss)), 5), nsmall =5))
+
+min       <- c(format(round((min(omxs30_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((min(bitcoin_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((min(brent_crude_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((min(sek_eur_log_return$perc_loss)), 5), nsmall =5),
+               format(round((min(treasury_log_return$perc_loss)), 5), nsmall =5))
+
+max       <- c(format(round((max(omxs30_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((max(bitcoin_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((max(brent_crude_log_return$perc_loss)), 5), nsmall =5), 
+               format(round((max(sek_eur_log_return$perc_loss)), 5), nsmall =5),
+               format(round((max(treasury_log_return$perc_loss)), 5), nsmall =5))
+
+descriptives <- data.frame("Asset" = c("OMXS30", "Bitcoin", "Brent crude", "SEK/EUR", "OMRXBOND"),
+                 "Mean" = means,
+                 "Std.Dev." = stddev,
+                 "Skewness" = skewness,
+                 "Kurtosis" = kurtosis,
+                 "Min" = min, 
+                 "Max" = max)
+
+kbl(descriptives, caption = "Descriptives statistics for each asset.", booktabs = T, align = "c") %>% row_spec(0, bold = TRUE) %>% kable_styling(latex_options = "HOLD_position")
+
+```
+
+There are some things to note in Table \@ref(tab:table1). First, we can see that Bitcoin had both the largest daily gain and largest daily loss during the relevant period, with the largest daily gain being substantially higher than the largest daily loss. Second place in this category is taken by Brent crude, which also exhibit rather large daily swings during the period. The SEK/EUR currency and the OMRXBOND index proved to be the least volatile in terms of daily swings during the period, with the OMXS30 being somewhere in the middle. 
+
+Of particular note here is the kurtosis. Kurtosis is a measure of the "tailedness"[^kurtosis] of a distribution. The normal distribution has a kurtosis of 3, and a distribution with a kurtosis deviating from this value suggests fatter tails and thus, that a normality assumption might not be an appropriate approximation for the underlying distribution. From the above, we see that all assets have a kurtosis above 3, which therefore suggests that they are heavy-tailed (or at least "heavier-tailed" than the normal distribution). To the surprise of no one, Bitcoin and Brent crude exhibits the highest kurtosis of the assets.  
+
+Lingering on the kurtosis point, we can further investigate the kurtosis by examining so-called quantile-quantile (Q-Q) plots, shown in Figure \@ref(fig:qqplots).
+
+```{r, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Q-Q plots for each asset, comparing sample quantiles to the theoretical quantiles.', out.width='100%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+
+library(ggplot2)
+library(latex2exp)
+library(evd)
+library(patchwork)
+theme_set(theme_minimal())
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+# Create QQ for OMXS30
+
+qq_omxs30 <- ggplot(as.data.frame(omxs30_log_return$perc_loss), aes(sample = omxs30_log_return$perc_loss))
+
+p_qq_omxs30 <- qq_omxs30 + stat_qq(colour = cbp1[7], size = 0.75) + stat_qq_line(colour = cbp1[1], size = 0.75, alpha = 0.5) +
+  ylab("OMXS30") +
+  xlab(" ")
+
+# Create QQ for bitcoin
+
+qq_bitcoin <- ggplot(as.data.frame(bitcoin_log_return$perc_loss), aes(sample = bitcoin_log_return$perc_loss))
+
+p_qq_bitcoin <- qq_bitcoin + stat_qq(colour = cbp1[7], size = 0.75) + stat_qq_line(colour = cbp1[1], size = 0.75, alpha = 0.5) +
+  ylab("Bitcoin") +
+  xlab(" ")
+
+# Create QQ for Brent
+
+qq_brent <- ggplot(as.data.frame(brent_crude_log_return$perc_loss), aes(sample = brent_crude_log_return$perc_loss))
+
+p_qq_brent <- qq_brent + stat_qq(colour = cbp1[7], size = 0.75) + stat_qq_line(colour = cbp1[1], size = 0.75, alpha = 0.5) +
+  ylab("Brent crude") +
+  xlab(" ")
+
+# Create QQ for SEK/EUR
+
+qq_sek <- ggplot(as.data.frame(sek_eur_log_return$perc_loss), aes(sample = sek_eur_log_return$perc_loss))
+
+p_qq_sek <- qq_sek + stat_qq(colour = cbp1[7], size = 0.75) + stat_qq_line(colour = cbp1[1], size = 0.75, alpha = 0.5) +
+  ylab("SEK/EUR") +
+  xlab(" ")
+
+# Create QQ for treasury
+
+qq_treasury <- ggplot(as.data.frame(treasury_log_return$perc_loss), aes(sample = treasury_log_return$perc_loss))
+
+p_qq_treasury <- qq_treasury + stat_qq(colour = cbp1[7], size = 0.75) + stat_qq_line(colour = cbp1[1], size = 0.75, alpha = 0.5) +
+  ylab("OMRXBOND") +
+  xlab(" ")
+
+
+
+```
+
+
+```{r, qqplots, cache = FALSE, message = FALSE, echo = FALSE, warning = FALSE, fig.cap='Q-Q plots for each asset, comparing sample quantiles to the theoretical quantiles.', out.width='100%', fig.pos = "H", fig.asp=.75, fig.align='center'}
+library(patchwork)
+
+(p_qq_omxs30 | p_qq_bitcoin) /
+(p_qq_brent | p_qq_sek) /
+(p_qq_treasury + plot_spacer())
+
+```
+
+
+If the data came from a normal distribution, the sample points would line on a straight line with the theoretical quantiles. From the above, we see quite clearly that a normality assumption is not realistic for these series since the tails are heavier, confirming what we saw in terms of kurtosis. This does indeed suggest that an EVT approach is reasonable for estimating ES on the basis of these time series, which we turn to next. 
+
+[^kurtosis]: Kurtosis is a measure of "tailedness", i.e. how the tails of a probability distribution behaves and is defined as $\text{Kurt}[X] = \frac{E[(X-\mu)^4]}{(E[(X-\mu)^2])^2}$. The more the kurtosis differs from 3, the "fatter" the tails of the distribution. There is a common misconception that kurtosis also measures the "peakedness" of a distribution, but this notion is dispelled by @westfall2014kurtosis. 
+
+[^volatilityclustering]: Volatility clustering was first observed by @mandelbrot1963 and the empirical property has been document by @granger1995some and @ding1996modeling, among many others. 
+
+
+\newpage 
+
+
